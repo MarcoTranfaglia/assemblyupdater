@@ -1,0 +1,170 @@
+﻿<Window
+    x:Class="AssemblyUpdater.MainWindow"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:conv="clr-namespace:AssemblyUpdater.Converter"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:local="clr-namespace:AssemblyUpdater"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    x:Name="MainWindowView"
+    Title="Assembly Version Updater"
+    Width="450"
+    Height="480"
+    mc:Ignorable="d">
+    <Window.Resources>
+        <conv:TextWithDescriptionConverter x:Key="TextWithDescriptionConverter" />
+
+        <Style TargetType="TextBlock">
+            <Setter Property="FontSize" Value="16" />
+        </Style>
+
+        <Style x:Key="VersionTextBoxStyle" TargetType="TextBox">
+            <Setter Property="FontSize" Value="20" />
+            <Setter Property="MaxLength" Value="2" />
+            <Setter Property="MinWidth" Value="32" />
+            <Setter Property="HorizontalContentAlignment" Value="Center" />
+        </Style>
+    </Window.Resources>
+
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+
+        <Grid Grid.Row="0" Margin="20,20,20,12">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="*" />
+                <RowDefinition Height="Auto" />
+            </Grid.RowDefinitions>
+
+            <StackPanel Grid.Row="0">
+                <TextBlock
+                    VerticalAlignment="Center"
+                    Text="Solution folder"
+                    ToolTip="Path to the folder containing the solution (*.sln) file." />
+
+                <Grid Height="28">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+
+                    <TextBox
+                        Grid.Column="0"
+                        Height="28"
+                        Margin="0"
+                        Padding="4"
+                        VerticalAlignment="Center"
+                        HorizontalContentAlignment="Left"
+                        VerticalContentAlignment="Center"
+                        FontSize="16"
+                        Text="{Binding SolutionPath}"
+                        TextBlock.LineHeight="18"
+                        TextBlock.LineStackingStrategy="BlockLineHeight"
+                        ToolTip="Path to the folder containing the solution (*.sln) file." />
+
+                    <Button
+                        Grid.Column="1"
+                        Margin="8,0,0,0"
+                        VerticalContentAlignment="Center"
+                        Command="{Binding CmdSelectFolder}"
+                        ToolTip="Select the path to the folder containing the solution (*.sln) file.">
+                        <TextBlock
+                            Padding="4"
+                            VerticalAlignment="Center"
+                            FontSize="16">
+                            Select Folder
+                        </TextBlock>
+                    </Button>
+                </Grid>
+
+                <TextBlock
+                    Margin="0,12,0,0"
+                    HorizontalAlignment="Center"
+                    Text="Version" />
+
+                <StackPanel HorizontalAlignment="Center" Orientation="Horizontal">
+                    <TextBox
+                        PreviewTextInput="VersionTextChanged"
+                        Style="{StaticResource VersionTextBoxStyle}"
+                        Text="{Binding DisplayedVersion[0]}" />
+                    <TextBox
+                        PreviewTextInput="VersionTextChanged"
+                        Style="{StaticResource VersionTextBoxStyle}"
+                        Text="{Binding DisplayedVersion[1]}" />
+                    <TextBox
+                        PreviewTextInput="VersionTextChanged"
+                        Style="{StaticResource VersionTextBoxStyle}"
+                        Text="{Binding DisplayedVersion[2]}" />
+                    <TextBox
+                        MinWidth="64"
+                        MaxLength="5"
+                        PreviewTextInput="VersionTextChanged"
+                        Style="{StaticResource VersionTextBoxStyle}"
+                        Text="{Binding DisplayedVersion[3]}" />
+
+                    <Button
+                        Width="28"
+                        Margin="4,0,0,0"
+                        HorizontalContentAlignment="Center"
+                        VerticalContentAlignment="Center"
+                        Command="{Binding CmdRefreshVersion}"
+                        Content="&#xE72C;"
+                        FontFamily="Segoe MDL2 Assets" />
+                </StackPanel>
+            </StackPanel>
+
+            <Button
+                Grid.Row="1"
+                Height="28"
+                Margin="0,12,0,0"
+                VerticalContentAlignment="Center"
+                Command="{Binding CmdUpdateVersion}"
+                FontSize="16">
+                UPDATE
+            </Button>
+
+            <DataGrid
+                CanUserAddRows="False"
+                AutoGenerateColumns="False"
+                GridLinesVisibility="None"
+                x:Name="FileUpdateListView"
+                Grid.Row="2"
+                ItemsSource="{Binding FilesToUpdateList}" >
+                 
+                    <DataGrid.Columns>
+                    <DataGridTextColumn Header="Version"  Width="100" IsReadOnly="True" Binding="{Binding Version}">
+                        <DataGridTextColumn.ElementStyle>
+                            <Style TargetType="TextBlock">
+                                <Setter Property="HorizontalAlignment" Value="Center" />
+                            </Style>
+                        </DataGridTextColumn.ElementStyle>
+                    </DataGridTextColumn>
+
+                    <DataGridTextColumn Header="File" Width="Auto" IsReadOnly="True" Binding="{Binding File}" />
+                    </DataGrid.Columns>
+            </DataGrid>
+
+            <TextBlock
+                x:Name="NumFilesFound"
+                Grid.Row="3"
+                Margin="0,4,0,0"
+                FontSize="14"
+                Text="{Binding FilesToUpdateList.Count, Converter={StaticResource TextWithDescriptionConverter}, ConverterParameter='Found files: '}" />
+        </Grid>
+
+
+        <ProgressBar
+            Grid.Row="1"
+            Height="20"
+            IsIndeterminate="False"
+            Maximum="{Binding FilesToUpdateList.Count}"
+            Minimum="0"
+            Value="{Binding CurrentlyUpdatedValues}" />
+
+        <Grid x:Name="OverlayPanel" Grid.RowSpan="2" />
+    </Grid>
+</Window>
