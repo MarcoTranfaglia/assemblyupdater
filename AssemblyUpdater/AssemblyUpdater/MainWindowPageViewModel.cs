@@ -5,7 +5,6 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.IO;
 using System.Linq;
-using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Forms;
@@ -19,6 +18,8 @@ namespace AssemblyUpdater
         private ObservableCollection<AssemblyFileItem> _filesToUpdate;
         private string _lastUpdatedFolder;
         private string _lastReadVersion;
+        private List<string> _versionsMismatch;
+
         private string _solutionPath;
         private string _solutionFilename;
         private string[] _displayedVersion;
@@ -126,6 +127,7 @@ namespace AssemblyUpdater
 
         private async Task<bool> LoadDataFromFolder(string newFolder, bool updateVersionField)
         {
+            _versionsMismatch = new List<string>();
             await Task.Delay(50);
 
             _lastUpdatedFolder = newFolder;
@@ -136,6 +138,12 @@ namespace AssemblyUpdater
                 {
                     CurrentlyUpdatedValues = 0;
                     FilesToUpdateList = new ObservableCollection<AssemblyFileItem>(await GetFilesToUpdate(newFolder));
+
+                    if (_versionsMismatch.Count > 1)
+                    {
+                        string message = string.Format("There is a version mismatch between: {0}", String.Join(", ", _versionsMismatch));
+                        System.Windows.Forms.MessageBox.Show(message, "Warning");
+                    }
 
                     if (FilesToUpdateList.Any())
                     {
@@ -205,7 +213,6 @@ namespace AssemblyUpdater
                 item.File = file.Replace(rootDirectory, "");
                 item.Version = ReadVersion(item.File);
                 resList.Add(item);
-
             }
 
             return resList;
@@ -235,46 +242,62 @@ namespace AssemblyUpdater
         {
             if (!string.IsNullOrEmpty(relativeFilePath) && !string.IsNullOrEmpty(SolutionPath))
             {
-                var content = File.ReadAllText(SolutionPath + relativeFilePath);
-                if (!string.IsNullOrEmpty(content))
+                string[] readText = File.ReadAllLines(SolutionPath + relativeFilePath);
+                string assemblyVersion = string.Empty;
+                string assemblyVersionFile = string.Empty;
+                var versionInfoLines = readText.Where(t => t.Contains("[assembly: AssemblyVersion"));
+                foreach (string item in versionInfoLines)
                 {
-                    //TODO TRY DIFFERENT FORMAT OF VERSION REGEX
-                    Regex versionRegex = new Regex(Constants.VERSION_REGEX);
+                    assemblyVersion = item.Substring(item.IndexOf('(') + 2, item.LastIndexOf(')') - item.IndexOf('(') - 3);
+                }
 
-                    var match = versionRegex.Match(content);
-                    if (match.Success)
+                var versionFileines = readText.Where(t => t.Contains("[assembly: AssemblyFileVersion"));
+                foreach (string item in versionFileines)
+                {
+                    assemblyVersionFile = item.Substring(item.IndexOf('(') + 2, item.LastIndexOf(')') - item.IndexOf('(') - 3);
+                }
+
+                if (assemblyVersion != assemblyVersionFile)
+                {
+                    string message = string.Format("There is a version mismatch in file {0} between AssemblyVersion: {1} and AssemblyFileVersion: {2}", SolutionPath + relativeFilePath, assemblyVersion, assemblyVersionFile);
+                    System.Windows.Forms.MessageBox.Show(message, "Warning");
+                }
+
+                if (!string.IsNullOrEmpty(assemblyVersion))
+                {
+                    if (_lastReadVersion != assemblyVersion
+                        &&
+                        !_versionsMismatch.Contains(assemblyVersion)
+                        )
                     {
-                        _lastReadVersion = match.Value;
-
-                        DisplayedVersion = match.Value.Split('.');
-
-                        string readableVersion = DisplayedVersion[0] + "." + DisplayedVersion[1];
-                        if (DisplayedVersion.Length > 2)
-                        {
-                            readableVersion += "." + DisplayedVersion[2];
-                        }
-                        if (DisplayedVersion.Length > 3)
-                        {
-                            readableVersion += "." + DisplayedVersion[3];
-                        }
-                        return readableVersion;
+                        _versionsMismatch.Add(assemblyVersion);
                     }
-                    else
+                    _lastReadVersion = assemblyVersion;
+
+                    DisplayedVersion = assemblyVersion.Split('.');
+
+                    string readableVersion = DisplayedVersion[0] + "." + DisplayedVersion[1];
+                    if (DisplayedVersion.Length > 2)
                     {
-                        return "";
+                        readableVersion += "." + DisplayedVersion[2];
                     }
-
+                    if (DisplayedVersion.Length > 3)
+                    {
+                        readableVersion += "." + DisplayedVersion[3];
+                    }
+                    return readableVersion;
                 }
                 else
                 {
-                    System.Windows.Forms.MessageBox.Show($"Empty Content of file: {relativeFilePath}", "Error");
-                    return "";
+                    System.Windows.Forms.MessageBox.Show($"File: {SolutionPath + relativeFilePath} does not contain any AssemblyInfo", "Error");
+                    _versionsMismatch.Add(Constants.NO_ASSEMBLY_VERSION);
+                    return Constants.NO_ASSEMBLY_VERSION;
                 }
             }
             else
             {
-                System.Windows.Forms.MessageBox.Show($"Path non correct  {relativeFilePath}", "Error");
-                return "";
+                System.Windows.Forms.MessageBox.Show($"Path non correct  {SolutionPath + relativeFilePath}", "Error");
+                return Constants.NO_ASSEMBLY_VERSION;
             }
         }
 
@@ -306,7 +329,6 @@ namespace AssemblyUpdater
             IsBusy = true;
             CurrentlyUpdatedValues = 0;
 
-
             bool canUpdate = true;
             if (!SolutionPath.Equals(_lastUpdatedFolder) || string.IsNullOrEmpty(_lastReadVersion) || DisplayedVersion == null)
             {
@@ -319,7 +341,8 @@ namespace AssemblyUpdater
 
                 if (!string.IsNullOrEmpty(_lastReadVersion))
                 {
-                    if (!newVersion.Equals(_lastReadVersion))
+                    if (!newVersion.Equals(_lastReadVersion)
+                        || _versionsMismatch.Count > 0)
                     {
                         foreach (var item in FilesToUpdateList)
                         {
@@ -327,8 +350,34 @@ namespace AssemblyUpdater
                             await Task.Run(() =>
                             {
                                 var completeFilePath = SolutionPath + file;
-                                var contents = File.ReadAllText(completeFilePath);
-                                string result = contents.Replace(_lastReadVersion, newVersion);
+                                var readText = File.ReadAllText(completeFilePath);
+                                string[] readLines = File.ReadAllLines(completeFilePath);
+                                string result = readText;
+
+                                //Check AssemblyVersion or AssemblyFileVersion are totally missing
+                                var versionInfoLines = readLines.Where(t => t.Contains("[assembly: AssemblyVersion"));
+                                var versionFileInfoLines = readLines.Where(t => t.Contains("[assembly: AssemblyFileVersion"));
+                                if (versionInfoLines.Count() == 0)
+                                {
+                                    result += "\n";
+                                    result += string.Format("[assembly: AssemblyVersion(\"{0}\")]\")", newVersion);
+                                }
+                                if (versionFileInfoLines.Count() == 0)
+                                {
+                                    if (versionInfoLines.Count() == 0)
+                                    {
+                                        result += "\n";
+                                    }
+                                    result += string.Format("[assembly: AssemblyFileVersion(\"{0}\")]\")", newVersion);
+
+                                }
+
+                                //Foreach because it should owerwrite all the mismatch versions
+                                foreach (string mismatchVersion in _versionsMismatch)
+                                {
+                                    result = result.Replace(mismatchVersion, newVersion);
+                                }
+
                                 File.WriteAllText(completeFilePath, result);
                                 item.Version = newVersion;
                             });
