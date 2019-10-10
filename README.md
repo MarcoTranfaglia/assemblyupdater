@@ -9,7 +9,7 @@ TODO/Improvements
 Build Status
 ------------
 
-![Build status](https://ci.appveyor.com/api/projects/status/761h098ybnygubqq?svg=true)
+[![Build status](https://ci.appveyor.com/api/projects/status/761h098ybnygubqq/branch/master?svg=true)](https://ci.appveyor.com/project/MarcoTranfaglia/assemblyupdater/branch/master)
 
 Contributors
 ------------
