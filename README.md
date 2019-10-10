@@ -3,6 +3,11 @@ WPF Application to update all assembly infos of specific visual studio solution
 
 
 Improvements to be done:
-- Integrate https://www.appveyor.com/
 - Set logo
-- Support for different formats
+
+Build Status
+https://ci.appveyor.com/api/projects/status/761h098ybnygubqq?svg=true
+
+Contributors
+- Marco Tranfaglia
+- Sergiu Manoliu
