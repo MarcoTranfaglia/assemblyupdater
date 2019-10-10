@@ -355,12 +355,12 @@ namespace AssemblyUpdater
                                 string result = readText;
 
                                 //Check AssemblyVersion or AssemblyFileVersion are totally missing
-                                var versionInfoLines = readLines.Where(t => t.Contains("[assembly: AssemblyVersion"));
-                                var versionFileInfoLines = readLines.Where(t => t.Contains("[assembly: AssemblyFileVersion"));
+                                var versionInfoLines = readLines.Where(t => t.Contains("[assembly: AssemblyVersion") && !t.StartsWith("//"));
+                                var versionFileInfoLines = readLines.Where(t => t.Contains("[assembly: AssemblyFileVersion") && !t.StartsWith("//"));
                                 if (versionInfoLines.Count() == 0)
                                 {
                                     result += "\n";
-                                    result += string.Format("[assembly: AssemblyVersion(\"{0}\")]\")", newVersion);
+                                    result += string.Format("[assembly: AssemblyVersion(\"{0}\")]", newVersion);
                                 }
                                 if (versionFileInfoLines.Count() == 0)
                                 {
@@ -368,7 +368,7 @@ namespace AssemblyUpdater
                                     {
                                         result += "\n";
                                     }
-                                    result += string.Format("[assembly: AssemblyFileVersion(\"{0}\")]\")", newVersion);
+                                    result += string.Format("[assembly: AssemblyFileVersion(\"{0}\")]", newVersion);
 
                                 }
 
