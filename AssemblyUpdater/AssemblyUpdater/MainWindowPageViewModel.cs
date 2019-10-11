@@ -29,6 +29,7 @@ namespace AssemblyUpdater
 
         public MainWindowPageViewModel()
         {
+            _versionsMismatch = new List<string>();
             SolutionPath = Settings.Default.LastUsedDirectory;
 
             CmdSelectFolder = new RelayCommand(x => !IsBusy, x => ExecuteSelectFolder());
@@ -141,7 +142,7 @@ namespace AssemblyUpdater
 
                     if (_versionsMismatch.Count > 1)
                     {
-                        string message = string.Format("There is a version mismatch between: {0}", String.Join(", ", _versionsMismatch));
+                        string message = string.Format(Constants.Messages.VERSIONS_MISMATCH, String.Join(", ", _versionsMismatch));
                         System.Windows.Forms.MessageBox.Show(message, "Warning");
                     }
 
@@ -179,7 +180,7 @@ namespace AssemblyUpdater
             if (possibleSolutionFilenames.Length == 0)
             {
                 System.Windows.MessageBox.Show(
-                    "The selected directory does not contain .sln files",
+                    Constants.Messages.NO_SLN_FILES,
                     "Error",
                     MessageBoxButton.OK,
                     MessageBoxImage.Warning);
@@ -245,13 +246,13 @@ namespace AssemblyUpdater
                 string[] readText = File.ReadAllLines(SolutionPath + relativeFilePath);
                 string assemblyVersion = string.Empty;
                 string assemblyVersionFile = string.Empty;
-                var versionInfoLines = readText.Where(t => t.Contains("[assembly: AssemblyVersion"));
+                var versionInfoLines = readText.Where(t => t.Contains("[assembly: AssemblyVersion") && !t.StartsWith("//"));
                 foreach (string item in versionInfoLines)
                 {
                     assemblyVersion = item.Substring(item.IndexOf('(') + 2, item.LastIndexOf(')') - item.IndexOf('(') - 3);
                 }
 
-                var versionFileines = readText.Where(t => t.Contains("[assembly: AssemblyFileVersion"));
+                var versionFileines = readText.Where(t => t.Contains("[assembly: AssemblyFileVersion") && !t.StartsWith("//"));
                 foreach (string item in versionFileines)
                 {
                     assemblyVersionFile = item.Substring(item.IndexOf('(') + 2, item.LastIndexOf(')') - item.IndexOf('(') - 3);
@@ -259,7 +260,7 @@ namespace AssemblyUpdater
 
                 if (assemblyVersion != assemblyVersionFile)
                 {
-                    string message = string.Format("There is a version mismatch in file {0} between AssemblyVersion: {1} and AssemblyFileVersion: {2}", SolutionPath + relativeFilePath, assemblyVersion, assemblyVersionFile);
+                    string message = string.Format(Constants.Messages.VERSIONS_MISMATCH_FILE, SolutionPath + relativeFilePath, assemblyVersion, assemblyVersionFile);
                     System.Windows.Forms.MessageBox.Show(message, "Warning");
                 }
 
@@ -289,14 +290,16 @@ namespace AssemblyUpdater
                 }
                 else
                 {
-                    System.Windows.Forms.MessageBox.Show($"File: {SolutionPath + relativeFilePath} does not contain any AssemblyInfo", "Error");
+                    string message = String.Format(Constants.Messages.NO_ASSEMBLY_INFO, SolutionPath + relativeFilePath);
+                    System.Windows.Forms.MessageBox.Show(message, "Error");
                     _versionsMismatch.Add(Constants.NO_ASSEMBLY_VERSION);
                     return Constants.NO_ASSEMBLY_VERSION;
                 }
             }
             else
             {
-                System.Windows.Forms.MessageBox.Show($"Path non correct  {SolutionPath + relativeFilePath}", "Error");
+                string message = string.Format(Constants.Messages.INCORRECT_PATH, SolutionPath + relativeFilePath);
+                System.Windows.Forms.MessageBox.Show(message, "Error");
                 return Constants.NO_ASSEMBLY_VERSION;
             }
         }
@@ -342,7 +345,7 @@ namespace AssemblyUpdater
                 if (!string.IsNullOrEmpty(_lastReadVersion))
                 {
                     if (!newVersion.Equals(_lastReadVersion)
-                        || _versionsMismatch.Count > 0)
+                        || _versionsMismatch.Count > 1)
                     {
                         foreach (var item in FilesToUpdateList)
                         {
@@ -386,16 +389,16 @@ namespace AssemblyUpdater
                         }
 
                         _lastReadVersion = newVersion;
-                        System.Windows.Forms.MessageBox.Show("Operation completed successfully.");
+                        System.Windows.Forms.MessageBox.Show(Constants.Messages.OPERATION_COMPLETED);
                     }
                     else
                     {
-                        System.Windows.Forms.MessageBox.Show("The assemblies are already updated. No changes are necessary.");
+                        System.Windows.Forms.MessageBox.Show(Constants.Messages.ASSEMBLIES_ALREADY_UPDATED);
                     }
                 }
                 else
                 {
-                    System.Windows.Forms.MessageBox.Show("Couldn't read current assembly version.", "Error");
+                    System.Windows.Forms.MessageBox.Show(Constants.Messages.CANNOT_READ_ASSEMBLY, "Error");
                 }
             }
 
