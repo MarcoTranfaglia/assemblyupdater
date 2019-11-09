@@ -4,7 +4,7 @@ WPF Application to update all assembly infos of specific visual studio solution
 
 TODO/Improvements
 ------------
-- Set logo
+- Update single selected assembly
 
 Build Status
 ------------
