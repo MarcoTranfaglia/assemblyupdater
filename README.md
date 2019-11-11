@@ -1,5 +1,5 @@
 # assemblyupdater
-WPF Application to update all assembly infos of specific visual studio solution
+.NET Core 3.0 WPF Application to view/update all assembly infos of specific visual studio solution
 
 
 TODO/Improvements

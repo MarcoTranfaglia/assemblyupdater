@@ -1,9 +1,9 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio 15
-VisualStudioVersion = 15.0.28010.2016
+# Visual Studio Version 16
+VisualStudioVersion = 16.0.29503.13
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AssemblyUpdater", "AssemblyUpdater\AssemblyUpdater.csproj", "{C61C0B52-72C0-4D51-8A07-7E478A7EEAA7}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AssemblyUpdater", "AssemblyUpdaterV\AssemblyUpdater.csproj", "{FB2CFB69-C201-4C7B-8E08-D2933D76B189}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -11,10 +11,10 @@ Global
 		Release|Any CPU = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
-		{C61C0B52-72C0-4D51-8A07-7E478A7EEAA7}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{C61C0B52-72C0-4D51-8A07-7E478A7EEAA7}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{C61C0B52-72C0-4D51-8A07-7E478A7EEAA7}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{C61C0B52-72C0-4D51-8A07-7E478A7EEAA7}.Release|Any CPU.Build.0 = Release|Any CPU
+		{FB2CFB69-C201-4C7B-8E08-D2933D76B189}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{FB2CFB69-C201-4C7B-8E08-D2933D76B189}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{FB2CFB69-C201-4C7B-8E08-D2933D76B189}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{FB2CFB69-C201-4C7B-8E08-D2933D76B189}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

@@ -26,11 +26,10 @@ namespace AssemblyUpdater
         private double _currentlyUpdatedValues;
 
 
-
         public MainWindowPageViewModel()
         {
             _versionsMismatch = new List<string>();
-            SolutionPath = Settings.Default.LastUsedDirectory;
+            //SolutionPath = Settings.Default.LastUsedDirectory;
 
             CmdSelectFolder = new RelayCommand(x => !IsBusy, x => ExecuteSelectFolder());
             CmdUpdateVersion = new RelayCommand(x => !IsBusy, x => ExecuteUpdateVersion());
@@ -150,8 +149,8 @@ namespace AssemblyUpdater
                     {
                         if (UpdateVersion(updateVersionField))
                         {
-                            Settings.Default.LastUsedDirectory = newFolder;
-                            Settings.Default.Save();
+                            //Settings.Default.LastUsedDirectory = newFolder;
+                            //Settings.Default.Save();
 
                             return true;
                         }
