@@ -1,4 +1,5 @@
 ﻿using AssemblyUpdater.Models;
+using AssemblyUpdater.Properties;
 using AssemblyUpdater.Utility;
 using System;
 using System.Collections.Generic;
@@ -25,11 +26,10 @@ namespace AssemblyUpdater
         private string[] _displayedVersion;
         private double _currentlyUpdatedValues;
 
-
         public MainWindowPageViewModel()
         {
             _versionsMismatch = new List<string>();
-            //SolutionPath = Settings.Default.LastUsedDirectory;
+            SolutionPath = Settings.Default.LastUsedDirectory;
 
             CmdSelectFolder = new RelayCommand(x => !IsBusy, x => ExecuteSelectFolder());
             CmdUpdateVersion = new RelayCommand(x => !IsBusy, x => ExecuteUpdateVersion());
@@ -141,7 +141,7 @@ namespace AssemblyUpdater
 
                     if (_versionsMismatch.Count > 1)
                     {
-                        string message = string.Format(Constants.Messages.VERSIONS_MISMATCH, String.Join(", ", _versionsMismatch));
+                        string message = string.Format(Resources.VERSIONS_MISMATCH, String.Join(", ", _versionsMismatch));
                         System.Windows.Forms.MessageBox.Show(message, "Warning");
                     }
 
@@ -149,8 +149,8 @@ namespace AssemblyUpdater
                     {
                         if (UpdateVersion(updateVersionField))
                         {
-                            //Settings.Default.LastUsedDirectory = newFolder;
-                            //Settings.Default.Save();
+                            Settings.Default.LastUsedDirectory = newFolder;
+                            Settings.Default.Save();
 
                             return true;
                         }
@@ -179,7 +179,7 @@ namespace AssemblyUpdater
             if (possibleSolutionFilenames.Length == 0)
             {
                 System.Windows.MessageBox.Show(
-                    Constants.Messages.NO_SLN_FILES,
+                    Resources.NO_SLN_FILES,
                     "Error",
                     MessageBoxButton.OK,
                     MessageBoxImage.Warning);
@@ -245,21 +245,39 @@ namespace AssemblyUpdater
                 string[] readText = File.ReadAllLines(SolutionPath + relativeFilePath);
                 string assemblyVersion = string.Empty;
                 string assemblyVersionFile = string.Empty;
+
+                //C#
                 var versionInfoLines = readText.Where(t => t.Contains("[assembly: AssemblyVersion") && !t.StartsWith("//"));
+
+                //C++
+                if (!versionInfoLines.Any())
+                {
+                    versionInfoLines = readText.Where(t => t.Contains("[assembly:AssemblyVersionAttribute") && !t.StartsWith("//"));
+                }
+
+
                 foreach (string item in versionInfoLines)
                 {
                     assemblyVersion = item.Substring(item.IndexOf('(') + 2, item.LastIndexOf(')') - item.IndexOf('(') - 3);
                 }
 
-                var versionFileines = readText.Where(t => t.Contains("[assembly: AssemblyFileVersion") && !t.StartsWith("//"));
-                foreach (string item in versionFileines)
+                //C#
+                var versionFileLines = readText.Where(t => t.Contains("[assembly: AssemblyFileVersion") && !t.StartsWith("//"));
+
+                //C++
+                if (!versionFileLines.Any())
+                {
+                    versionFileLines = readText.Where(t => t.Contains("[assembly:AssemblyFileVersionAttribute") && !t.StartsWith("//"));
+                }
+
+                foreach (string item in versionFileLines)
                 {
                     assemblyVersionFile = item.Substring(item.IndexOf('(') + 2, item.LastIndexOf(')') - item.IndexOf('(') - 3);
                 }
 
                 if (assemblyVersion != assemblyVersionFile)
                 {
-                    string message = string.Format(Constants.Messages.VERSIONS_MISMATCH_FILE, SolutionPath + relativeFilePath, assemblyVersion, assemblyVersionFile);
+                    string message = string.Format(Resources.VERSIONS_MISMATCH_FILE, SolutionPath + relativeFilePath, assemblyVersion, assemblyVersionFile);
                     System.Windows.Forms.MessageBox.Show(message, "Warning");
                 }
 
@@ -289,7 +307,7 @@ namespace AssemblyUpdater
                 }
                 else
                 {
-                    string message = String.Format(Constants.Messages.NO_ASSEMBLY_INFO, SolutionPath + relativeFilePath);
+                    string message = String.Format(Resources.NO_ASSEMBLY_INFO, SolutionPath + relativeFilePath);
                     System.Windows.Forms.MessageBox.Show(message, "Error");
                     _versionsMismatch.Add(Constants.NO_ASSEMBLY_VERSION);
                     return Constants.NO_ASSEMBLY_VERSION;
@@ -297,7 +315,7 @@ namespace AssemblyUpdater
             }
             else
             {
-                string message = string.Format(Constants.Messages.INCORRECT_PATH, SolutionPath + relativeFilePath);
+                string message = string.Format(Resources.INCORRECT_PATH, SolutionPath + relativeFilePath);
                 System.Windows.Forms.MessageBox.Show(message, "Error");
                 return Constants.NO_ASSEMBLY_VERSION;
             }
@@ -357,21 +375,48 @@ namespace AssemblyUpdater
                                 string result = readText;
 
                                 //Check AssemblyVersion or AssemblyFileVersion are totally missing
-                                var versionInfoLines = readLines.Where(t => t.Contains("[assembly: AssemblyVersion") && !t.StartsWith("//"));
-                                var versionFileInfoLines = readLines.Where(t => t.Contains("[assembly: AssemblyFileVersion") && !t.StartsWith("//"));
+                                IEnumerable<string> versionInfoLines = null;
+                                IEnumerable<string> versionFileInfoLines = null;
+                                if (item.File.EndsWith(".cs"))
+                                {
+                                    versionInfoLines = readLines.Where(t => t.Contains("[assembly: AssemblyVersion") && !t.StartsWith("//"));
+                                    versionFileInfoLines = readLines.Where(t => t.Contains("[assembly: AssemblyFileVersion") && !t.StartsWith("//"));
+                                }
+                                else if (item.File.EndsWith(".cpp"))
+                                {
+                                    versionInfoLines = readLines.Where(t => t.Contains("[assembly:AssemblyVersionAttribute") && !t.StartsWith("//"));
+                                    versionFileInfoLines = readLines.Where(t => t.Contains("[assembly:AssemblyFileVersionAttribute") && !t.StartsWith("//"));
+                                }
+
+
                                 if (versionInfoLines.Count() == 0)
                                 {
                                     result += "\n";
-                                    result += string.Format("[assembly: AssemblyVersion(\"{0}\")]", newVersion);
-                                }
-                                if (versionFileInfoLines.Count() == 0)
-                                {
-                                    if (versionInfoLines.Count() == 0)
+                                    if (item.File.EndsWith(".cs"))
                                     {
-                                        result += "\n";
+                                        result += string.Format("[assembly: AssemblyVersion(\"{0}\")]", newVersion);
                                     }
-                                    result += string.Format("[assembly: AssemblyFileVersion(\"{0}\")]", newVersion);
+                                    else if (item.File.EndsWith(".cpp"))
+                                    {
+                                        result += string.Format("[assembly:AssemblyVersionAttribute(\"{0}\")]", newVersion);
+                                    }
 
+                                    if (versionFileInfoLines.Count() == 0)
+                                    {
+                                        if (versionInfoLines.Count() == 0)
+                                        {
+                                            result += "\n";
+                                        }
+                                        if (item.File.EndsWith(".cs"))
+                                        {
+                                            result += string.Format("[assembly: AssemblyFileVersion(\"{0}\")]", newVersion);
+                                        }
+                                        else if (item.File.EndsWith(".cpp"))
+                                        {
+                                            result += string.Format("[assembly:AssemblyFileVersionAttribute(\"{0}\")]", newVersion);
+                                        }
+
+                                    }
                                 }
 
                                 //Foreach because it should owerwrite all the mismatch versions
@@ -382,22 +427,23 @@ namespace AssemblyUpdater
 
                                 File.WriteAllText(completeFilePath, result);
                                 item.Version = newVersion;
+
                             });
 
                             CurrentlyUpdatedValues++;
                         }
 
                         _lastReadVersion = newVersion;
-                        System.Windows.Forms.MessageBox.Show(Constants.Messages.OPERATION_COMPLETED);
+                        System.Windows.Forms.MessageBox.Show(Resources.OPERATION_COMPLETED);
                     }
                     else
                     {
-                        System.Windows.Forms.MessageBox.Show(Constants.Messages.ASSEMBLIES_ALREADY_UPDATED);
+                        System.Windows.Forms.MessageBox.Show(Resources.ASSEMBLIES_ALREADY_UPDATED);
                     }
                 }
                 else
                 {
-                    System.Windows.Forms.MessageBox.Show(Constants.Messages.CANNOT_READ_ASSEMBLY, "Error");
+                    System.Windows.Forms.MessageBox.Show(Resources.CANNOT_READ_ASSEMBLY, "Error");
                 }
             }
 
