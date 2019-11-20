@@ -8,7 +8,7 @@
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     x:Name="MainWindowView"
     Title="Assembly Version Updater"
-    Width="450"
+    Width="700"
     Height="480"
     mc:Ignorable="d">
     <Window.Resources>
@@ -81,39 +81,71 @@
                     </Button>
                 </Grid>
 
-                <TextBlock
-                    Margin="0,12,0,0"
-                    HorizontalAlignment="Center"
-                    Text="Version" />
+                <StackPanel HorizontalAlignment="Left" Orientation="Horizontal" Margin="0,10,0,0">
+                    <TextBlock
+                    Margin="0,5,10,0"
+                    HorizontalAlignment="Left"
+                    Text="Version Read" />
 
-                <StackPanel HorizontalAlignment="Center" Orientation="Horizontal">
                     <TextBox
                         PreviewTextInput="VersionTextChanged"
                         Style="{StaticResource VersionTextBoxStyle}"
+                                                IsEnabled="False"
                         Text="{Binding DisplayedVersion[0]}" />
                     <TextBox
                         PreviewTextInput="VersionTextChanged"
                         Style="{StaticResource VersionTextBoxStyle}"
+                                                IsEnabled="False"
+
                         Text="{Binding DisplayedVersion[1]}" />
                     <TextBox
                         PreviewTextInput="VersionTextChanged"
                         Style="{StaticResource VersionTextBoxStyle}"
+                                                IsEnabled="False"
                         Text="{Binding DisplayedVersion[2]}" />
                     <TextBox
                         MinWidth="64"
                         MaxLength="5"
                         PreviewTextInput="VersionTextChanged"
                         Style="{StaticResource VersionTextBoxStyle}"
+                        IsEnabled="False"
                         Text="{Binding DisplayedVersion[3]}" />
 
+                  
+                    
                     <Button
                         Width="28"
-                        Margin="4,0,0,0"
+                        Margin="50,0,0,0"
                         HorizontalContentAlignment="Center"
                         VerticalContentAlignment="Center"
                         Command="{Binding CmdRefreshVersion}"
                         Content="&#xE72C;"
                         FontFamily="Segoe MDL2 Assets" />
+
+                    <TextBlock
+                    Margin="40,5,10,0"
+                    HorizontalAlignment="Right"
+                    Text="Version Write" />
+
+                    <TextBox
+                        PreviewTextInput="VersionTextChanged"
+                        Style="{StaticResource VersionTextBoxStyle}"
+                        Text="{Binding ToWriteVersion[0]}" />
+                    <TextBox
+                        PreviewTextInput="VersionTextChanged"
+                        Style="{StaticResource VersionTextBoxStyle}"
+                        Text="{Binding ToWriteVersion[1]}" />
+                    <TextBox
+                        PreviewTextInput="VersionTextChanged"
+                        Style="{StaticResource VersionTextBoxStyle}"
+                        Text="{Binding ToWriteVersion[2]}" />
+                    <TextBox
+                        MinWidth="64"
+                        MaxLength="5"
+                        PreviewTextInput="VersionTextChanged"
+                        Style="{StaticResource VersionTextBoxStyle}"
+                        Text="{Binding ToWriteVersion[3]}" />
+                   
                 </StackPanel>
             </StackPanel>
 
@@ -123,8 +155,9 @@
                 Margin="0,12,0,0"
                 VerticalContentAlignment="Center"
                 Command="{Binding CmdUpdateVersion}"
+                Content="UPDATE ALL ASSEMBLIES"
                 FontSize="16">
-                UPDATE
+                
             </Button>
 
             <DataGrid
@@ -135,7 +168,7 @@
                 Grid.Row="2"
                 ItemsSource="{Binding FilesToUpdateList}" >
                  
-                    <DataGrid.Columns>
+                <DataGrid.Columns>
                     <DataGridTextColumn Header="Version"  Width="100" IsReadOnly="True" Binding="{Binding Version}">
                         <DataGridTextColumn.ElementStyle>
                             <Style TargetType="TextBlock">
@@ -145,7 +178,17 @@
                     </DataGridTextColumn>
 
                     <DataGridTextColumn Header="File" Width="Auto" IsReadOnly="True" Binding="{Binding File}" />
-                    </DataGrid.Columns>
+
+                    <DataGridTemplateColumn Width="100">
+                        <DataGridTemplateColumn.CellTemplate>
+                            <DataTemplate>
+                                <Button Click="Update_Single_Assembly">Update</Button>
+                            </DataTemplate>
+                        </DataGridTemplateColumn.CellTemplate>
+                    </DataGridTemplateColumn>
+
+                </DataGrid.Columns>
+
             </DataGrid>
 
             <TextBlock
