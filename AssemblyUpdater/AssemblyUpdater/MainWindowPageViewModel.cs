@@ -33,6 +33,7 @@ namespace AssemblyUpdater
             _versionsMismatch = new List<string>();
             SolutionPath = Settings.Default.LastUsedDirectory;
 
+            CmdUpdateSingleFile = new RelayCommand(x => !IsBusy, x => UpdateSingleFileWithNotification((AssemblyFileItem)x));
             CmdSelectFolder = new RelayCommand(x => !IsBusy, x => ExecuteSelectFolder());
             CmdUpdateVersion = new RelayCommand(x => !IsBusy, x => ExecuteUpdateVersion());
             CmdRefreshVersion = new RelayCommand(x => !IsBusy, x => ExecuteRefreshVersion());
@@ -44,6 +45,7 @@ namespace AssemblyUpdater
             IsBusy = false;
         }
 
+        public ICommand CmdUpdateSingleFile { get; set; }
         public ICommand CmdSelectFolder { get; set; }
         public ICommand CmdUpdateVersion { get; set; }
         public ICommand CmdRefreshVersion { get; set; }
@@ -220,16 +222,19 @@ namespace AssemblyUpdater
             List<AssemblyFileItem> resList = null;
 
             resList = new List<AssemblyFileItem>();
-
+            string assemblyVersion = "";
             foreach (var file in fileList)
             {
                 AssemblyFileItem item = new AssemblyFileItem();
 
                 item.File = file.Replace(rootDirectory, "");
                 item.Version = ReadVersion(item.File);
+                assemblyVersion = item.Version;
                 resList.Add(item);
             }
 
+            _lastReadVersion = assemblyVersion;
+            DisplayedVersion = assemblyVersion.Split('.');
             return resList;
         }
 
@@ -304,10 +309,11 @@ namespace AssemblyUpdater
                     {
                         _versionsMismatch.Add(assemblyVersion);
                     }
-                    _lastReadVersion = assemblyVersion;
 
-                    DisplayedVersion = assemblyVersion.Split('.');
-
+                    if (DisplayedVersion == null)
+                    {
+                        DisplayedVersion = assemblyVersion.Split(".");
+                    }
                     string readableVersion = GetReadableVersion(DisplayedVersion);
                     return readableVersion;
                 }
@@ -346,7 +352,7 @@ namespace AssemblyUpdater
                 IsBusy = true;
 
                 await LoadDataFromFolder(SolutionPath, true);
-                
+
                 IsBusy = false;
             }
         }
@@ -413,8 +419,9 @@ namespace AssemblyUpdater
             IsBusy = false;
         }
 
-        public void UpdateSingleFileWithNotification(AssemblyFileItem item, string newVersion)
+        public void UpdateSingleFileWithNotification(AssemblyFileItem item)
         {
+            string newVersion = string.Join(".", ToWriteVersion);
             FileManagement.UpdateSingleFile(item, newVersion, SolutionPath, _versionsMismatch, CurrentlyUpdatedValues);
             System.Windows.Forms.MessageBox.Show(Resources.OPERATION_COMPLETED);
         }

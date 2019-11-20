@@ -29,12 +29,6 @@ namespace AssemblyUpdater
             e.Handled = regex.IsMatch(e.Text);
         }
 
-        private void Update_Single_Assembly(object sender, RoutedEventArgs e)
-        {
-            AssemblyFileItem item = (sender as Button).DataContext as AssemblyFileItem;
-            MainWindowPageViewModel model = new MainWindowPageViewModel();
-            string newVersion = model.GetReadableVersion(model.ToWriteVersion);
-            model.UpdateSingleFileWithNotification(item, newVersion);
-        }
+
     }
 }
