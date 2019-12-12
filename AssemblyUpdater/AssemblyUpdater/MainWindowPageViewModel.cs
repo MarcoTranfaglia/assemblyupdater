@@ -314,8 +314,7 @@ namespace AssemblyUpdater
                     {
                         DisplayedVersion = assemblyVersion.Split(".");
                     }
-                    string readableVersion = GetReadableVersion(DisplayedVersion);
-                    return readableVersion;
+                    return assemblyVersion;
                 }
                 else
                 {
