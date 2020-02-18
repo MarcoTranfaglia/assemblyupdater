@@ -1,0 +1,80 @@
+﻿<Window
+    x:Class="AssemblyUpdater.SetupDlg"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:local="clr-namespace:AssemblyUpdater"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    Title="Setup"
+    Width="600"
+    SizeToContent="Height"
+    mc:Ignorable="d">
+    <Grid Margin="20">
+        <StackPanel>
+            
+            <StackPanel Grid.Row="0">
+                <TextBlock
+                    VerticalAlignment="Center"
+                    Text="Solution folder"
+                    ToolTip="Path to the folder containing the solution (*.sln) file." />
+
+                <Grid Height="28">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+
+                    <TextBox
+                        Grid.Column="0"
+                        Height="28"
+                        Margin="0"
+                        Padding="4"
+                        VerticalAlignment="Center"
+                        HorizontalContentAlignment="Left"
+                        VerticalContentAlignment="Center"
+                        FontSize="16"
+                        Text="{Binding LastUsedDirectory}"
+                        TextBlock.LineHeight="18"
+                        TextBlock.LineStackingStrategy="BlockLineHeight"
+                        ToolTip="Path to the folder containing the solution (*.sln) file." />
+
+                    <Button
+                        Grid.Column="1"
+                        Margin="8,0,0,0"
+                        VerticalContentAlignment="Center"
+                        Command="{Binding CmdSelectFolder}"
+                        ToolTip="Select the path to the folder containing the solution (*.sln) file.">
+                        <TextBlock
+                            Padding="4"
+                            VerticalAlignment="Center"
+                            FontSize="16">
+                            Select Folder
+                        </TextBlock>
+                    </Button>
+                </Grid>
+
+                <StackPanel
+                Margin="0,40,0,0"
+                HorizontalAlignment="Right"
+                Orientation="Horizontal">
+
+                <Button
+                    Margin="0,0,8,0"
+                    Command="{Binding ResetCommand}"
+                    CommandParameter="False"
+                    Content="Reset" />
+
+                <Button
+                    Margin="0,0,8,0"
+                    Command="{Binding CommitCommand}"
+                    CommandParameter="False"
+                    Content="Cancel" />
+                <Button
+                    Command="{Binding CommitCommand}"
+                    CommandParameter="True"
+                    Content="Accept" />
+            </StackPanel>
+        </StackPanel>
+        </StackPanel>
+    </Grid>
+</Window>

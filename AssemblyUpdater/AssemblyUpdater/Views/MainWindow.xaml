@@ -41,45 +41,13 @@
             </Grid.RowDefinitions>
 
             <StackPanel Grid.Row="0">
-                <TextBlock
-                    VerticalAlignment="Center"
-                    Text="Solution folder"
-                    ToolTip="Path to the folder containing the solution (*.sln) file." />
 
-                <Grid Height="28">
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="*" />
-                        <ColumnDefinition Width="Auto" />
-                    </Grid.ColumnDefinitions>
-
-                    <TextBox
-                        Grid.Column="0"
-                        Height="28"
-                        Margin="0"
-                        Padding="4"
-                        VerticalAlignment="Center"
-                        HorizontalContentAlignment="Left"
-                        VerticalContentAlignment="Center"
-                        FontSize="16"
-                        Text="{Binding SolutionPath}"
-                        TextBlock.LineHeight="18"
-                        TextBlock.LineStackingStrategy="BlockLineHeight"
-                        ToolTip="Path to the folder containing the solution (*.sln) file." />
-
-                    <Button
-                        Grid.Column="1"
-                        Margin="8,0,0,0"
-                        VerticalContentAlignment="Center"
-                        Command="{Binding CmdSelectFolder}"
-                        ToolTip="Select the path to the folder containing the solution (*.sln) file.">
-                        <TextBlock
-                            Padding="4"
-                            VerticalAlignment="Center"
-                            FontSize="16">
-                            Select Folder
-                        </TextBlock>
-                    </Button>
-                </Grid>
+                <TextBox
+                        PreviewTextInput="VersionTextChanged"
+                        Style="{StaticResource VersionTextBoxStyle}"
+                                                IsEnabled="False"
+                        Text="{Binding SolutionPath, Mode=OneWay}" />
+                <Button Margin="8,0,0,0" Command="{Binding SetupCommand}" Content="Config" />
 
                 <StackPanel HorizontalAlignment="Left" Orientation="Horizontal" Margin="0,10,0,0">
                     <TextBlock

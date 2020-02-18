@@ -6,9 +6,9 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.IO;
 using System.Linq;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using System.Windows;
-using System.Windows.Forms;
 using System.Windows.Input;
 
 namespace AssemblyUpdater
@@ -16,12 +16,12 @@ namespace AssemblyUpdater
     public class MainWindowPageViewModel : NotifyBase
     {
         public bool _isBusy;
+        private ObservableCollection<FrameworkProjectItem> _frameworkToUpdate;
         private ObservableCollection<AssemblyFileItem> _filesToUpdate;
         private string _lastUpdatedFolder;
         private string _lastReadVersion;
         private List<string> _versionsMismatch;
 
-        private string _solutionPath;
         private string _solutionFilename;
         private string[] _displayedVersion;
         private string[] _toWriteVersion;
@@ -31,12 +31,14 @@ namespace AssemblyUpdater
         public MainWindowPageViewModel()
         {
             _versionsMismatch = new List<string>();
-            SolutionPath = Settings.Default.LastUsedDirectory;
+
+            SetupCommand = new RelayCommand(x=> !IsBusy, x=> Setup());
+            CmdUpdateSingleFile = new RelayCommand(x => !IsBusy, x => UpdateSingleFileWithNotification((AssemblyFileItem)x));
 
             CmdUpdateSingleFile = new RelayCommand(x => !IsBusy, x => UpdateSingleFileWithNotification((AssemblyFileItem)x));
-            CmdSelectFolder = new RelayCommand(x => !IsBusy, x => ExecuteSelectFolder());
             CmdUpdateVersion = new RelayCommand(x => !IsBusy, x => ExecuteUpdateVersion());
             CmdRefreshVersion = new RelayCommand(x => !IsBusy, x => ExecuteRefreshVersion());
+            CmdSwitchFramework = new RelayCommand(x => !IsBusy, x => ExecuteSwitchFramework());
 
             IsBusy = true;
 
@@ -45,8 +47,9 @@ namespace AssemblyUpdater
             IsBusy = false;
         }
 
+        public ICommand SetupCommand { get; set; }
+        public ICommand CmdSwitchFramework { get; set; }
         public ICommand CmdUpdateSingleFile { get; set; }
-        public ICommand CmdSelectFolder { get; set; }
         public ICommand CmdUpdateVersion { get; set; }
         public ICommand CmdRefreshVersion { get; set; }
 
@@ -68,12 +71,7 @@ namespace AssemblyUpdater
         {
             get
             {
-                return _solutionPath;
-            }
-            set
-            {
-                _solutionPath = value;
-                OnPropertyChanged();
+                return Settings.Default.LastUsedDirectory;
             }
         }
 
@@ -90,6 +88,41 @@ namespace AssemblyUpdater
             }
         }
 
+        private void Setup(bool forceInitialization = false)
+        {
+            var dlg = new SetupDlg();
+            var dlgRes = dlg.ShowDialog();
+
+            if (dlgRes == true)
+            {
+                if (InitializeApp())
+                {
+                    MessageBox.Show("The settings have been updated.");
+                }
+                else
+                {
+                    Setup(true);
+                }
+            }
+            else if (forceInitialization)
+            {
+                MessageBox.Show("You can't continue until all configuration values are set up.");
+                Setup(true);
+            }
+        }
+
+        private bool InitializeApp()
+        {
+            if (string.IsNullOrEmpty(SolutionPath))
+            {
+                MessageBox.Show("Setup all the configuration values before proceeding.");
+                return false;
+            }
+
+            LoadDataFromFolder(SolutionPath, true);
+            return true;
+        }
+
         public ObservableCollection<AssemblyFileItem> FilesToUpdateList
         {
             get
@@ -99,6 +132,19 @@ namespace AssemblyUpdater
             set
             {
                 _filesToUpdate = value;
+                OnPropertyChanged();
+            }
+        }
+
+        public ObservableCollection<FrameworkProjectItem> ProjectToUpdate
+        {
+            get
+            {
+                return _frameworkToUpdate;
+            }
+            set
+            {
+                _frameworkToUpdate = value;
                 OnPropertyChanged();
             }
         }
@@ -154,6 +200,7 @@ namespace AssemblyUpdater
                 {
                     CurrentlyUpdatedValues = 0;
                     FilesToUpdateList = new ObservableCollection<AssemblyFileItem>(await GetFilesToUpdate(newFolder));
+                    ProjectToUpdate = new ObservableCollection<FrameworkProjectItem>(await GetProjectsToUpdate(newFolder));
 
                     if (_versionsMismatch.Count > 1)
                     {
@@ -238,6 +285,56 @@ namespace AssemblyUpdater
             return resList;
         }
 
+        /// <summary>
+        /// Gets a list of relative path for the files to be updated.
+        /// </summary>
+        /// <param name="rootDirectory"></param>
+        /// <returns></returns>
+        private async Task<List<FrameworkProjectItem>> GetProjectsToUpdate(string rootDirectory)
+        {
+            var fileList = await Task.Run(() => LookForProjects(rootDirectory));
+            List<FrameworkProjectItem> resList = null;
+
+            resList = new List<FrameworkProjectItem>();
+            string frameworkVersion = "";
+            foreach (var file in fileList)
+            {
+                FrameworkProjectItem item = new FrameworkProjectItem();
+
+                item.Project = file.Replace(rootDirectory, "");
+                item.Framework = ReadFrameworkVersion(item.Project);
+                frameworkVersion = item.Framework;
+                resList.Add(item);
+            }
+
+            // _lastReadVersion = frameworkVersion;
+            // DisplayedVersion = frameworkVersion.Split('.');
+            return resList;
+        }
+
+        private List<string> LookForProjects(string rootDirectory)
+        {
+            List<string> filesToUpdate = new List<string>();
+
+            var currFiles = Directory.GetFiles(rootDirectory);
+            var fileToUpdate = currFiles.FirstOrDefault(x => Constants.PROJECT_REGEX.Any(x.Contains));
+            var myRegex = new Regex(Constants.PROJECT_REGEX);
+            var resultList = currFiles.Where(x => myRegex.IsMatch(x)).ToList();  
+            fileToUpdate = resultList.FirstOrDefault();
+
+            if (fileToUpdate == null)
+            {
+                var currDirectories = Directory.GetDirectories(rootDirectory);
+                Parallel.ForEach(currDirectories, x => filesToUpdate.AddRange(LookForProjects(x)));
+            }
+            else
+            {
+                filesToUpdate.Add(fileToUpdate);
+            }
+
+            return filesToUpdate;
+        }
+
         private List<string> LookForAssemblies(string rootDirectory)
         {
             List<string> filesToUpdate = new List<string>();
@@ -258,7 +355,26 @@ namespace AssemblyUpdater
             return filesToUpdate;
         }
 
-        private string ReadVersion(string relativeFilePath)
+        private string ReadFrameworkVersion(string relativeFilePath)
+        {
+            if (!string.IsNullOrEmpty(relativeFilePath) && !string.IsNullOrEmpty(SolutionPath))
+            {
+                string[] readText = File.ReadAllLines(SolutionPath + relativeFilePath);
+                string frameworkVersion = string.Empty;
+
+                var versionInfoLines = readText.Where(t => t.Contains("<TargetFrameworkVersion>"));
+                foreach (string item in versionInfoLines)
+                {
+                    frameworkVersion = item.Substring(item.IndexOf('>') + 2, item.Length - item.LastIndexOf('<'));
+                }
+
+                return frameworkVersion;
+            }
+
+            return "0.0";
+        }
+
+            private string ReadVersion(string relativeFilePath)
         {
             if (!string.IsNullOrEmpty(relativeFilePath) && !string.IsNullOrEmpty(SolutionPath))
             {
@@ -356,6 +472,18 @@ namespace AssemblyUpdater
             }
         }
 
+        private async void ExecuteSwitchFramework()
+        {
+            if (!IsBusy)
+            {
+                IsBusy = true;
+
+                await LoadDataFromFolder(SolutionPath, true);
+
+                IsBusy = false;
+            }
+        }
+
         public string GetReadableVersion(string[] arrayedVersion)
         {
             string readableVersion = string.Empty;
@@ -426,22 +554,5 @@ namespace AssemblyUpdater
         }
 
 
-        private async void ExecuteSelectFolder()
-        {
-            var folderBrowser = new FolderBrowserDialog();
-            folderBrowser.RootFolder = Environment.SpecialFolder.Desktop;
-            folderBrowser.SelectedPath = SolutionPath;
-
-            var result = folderBrowser.ShowDialog();
-            if (result == DialogResult.OK)
-            {
-                IsBusy = true;
-
-                SolutionPath = folderBrowser.SelectedPath;
-                await LoadDataFromFolder(folderBrowser.SelectedPath, true);
-
-                IsBusy = false;
-            }
-        }
     }
 }
