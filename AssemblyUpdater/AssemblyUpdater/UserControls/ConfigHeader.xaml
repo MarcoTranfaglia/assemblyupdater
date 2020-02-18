@@ -1,0 +1,87 @@
+﻿<UserControl x:Class="AssemblyUpdater.UserControls.ConfigHeader"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
+             xmlns:local="clr-namespace:AssemblyUpdater.UserControls"
+             mc:Ignorable="d" 
+             d:DesignHeight="450" d:DesignWidth="800">
+
+        <StackPanel Grid.Row="0">
+            <TextBox
+                        PreviewTextInput="VersionTextChanged"
+                        Style="{StaticResource VersionTextBoxStyle}"
+                                                IsEnabled="False"
+                        Text="{Binding SolutionPath, Mode=OneWay}" />
+            <Button Margin="8,0,0,0" Command="{Binding SetupCommand}" Content="Config" />
+
+
+            <StackPanel HorizontalAlignment="Left" Orientation="Horizontal" Margin="0,10,0,0">
+                <TextBlock
+                    Margin="0,5,10,0"
+                    HorizontalAlignment="Left"
+                    Text="Version Read" />
+
+                <TextBox
+                        PreviewTextInput="VersionTextChanged"
+                        Style="{StaticResource VersionTextBoxStyle}"
+                                                IsEnabled="False"
+                        Text="{Binding DisplayedVersion[0]}" />
+                <TextBox
+                        PreviewTextInput="VersionTextChanged"
+                        Style="{StaticResource VersionTextBoxStyle}"
+                                                IsEnabled="False"
+
+                        Text="{Binding DisplayedVersion[1]}" />
+                <TextBox
+                        PreviewTextInput="VersionTextChanged"
+                        Style="{StaticResource VersionTextBoxStyle}"
+                                                IsEnabled="False"
+                        Text="{Binding DisplayedVersion[2]}" />
+                <TextBox
+                        MinWidth="64"
+                        MaxLength="5"
+                        PreviewTextInput="VersionTextChanged"
+                        Style="{StaticResource VersionTextBoxStyle}"
+                        IsEnabled="False"
+                        Text="{Binding DisplayedVersion[3]}" />
+
+
+
+                <Button
+                        Width="28"
+                        Margin="50,0,0,0"
+                        HorizontalContentAlignment="Center"
+                        VerticalContentAlignment="Center"
+                        Command="{Binding CmdRefreshVersion}"
+                        Content="&#xE72C;"
+                        FontFamily="Segoe MDL2 Assets" />
+
+                <TextBlock
+                    Margin="40,5,10,0"
+                    HorizontalAlignment="Right"
+                    Text="Version Write" />
+
+                <TextBox
+                        PreviewTextInput="VersionTextChanged"
+                        Style="{StaticResource VersionTextBoxStyle}"
+                        Text="{Binding ToWriteVersion[0]}" />
+                <TextBox
+                        PreviewTextInput="VersionTextChanged"
+                        Style="{StaticResource VersionTextBoxStyle}"
+                        Text="{Binding ToWriteVersion[1]}" />
+                <TextBox
+                        PreviewTextInput="VersionTextChanged"
+                        Style="{StaticResource VersionTextBoxStyle}"
+                        Text="{Binding ToWriteVersion[2]}" />
+                <TextBox
+                        MinWidth="64"
+                        MaxLength="5"
+                        PreviewTextInput="VersionTextChanged"
+                        Style="{StaticResource VersionTextBoxStyle}"
+                        Text="{Binding ToWriteVersion[3]}" />
+
+            </StackPanel>
+        </StackPanel>
+
+</UserControl>

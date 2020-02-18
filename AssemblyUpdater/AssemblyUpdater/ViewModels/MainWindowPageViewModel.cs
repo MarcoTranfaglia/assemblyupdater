@@ -10,13 +10,14 @@ using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Input;
+using System.Xml;
 
 namespace AssemblyUpdater
 {
     public class MainWindowPageViewModel : NotifyBase
     {
         public bool _isBusy;
-        private ObservableCollection<FrameworkProjectItem> _frameworkToUpdate;
+        private ObservableCollection<FrameworkProjectItem> _projectsToUpdate;
         private ObservableCollection<AssemblyFileItem> _filesToUpdate;
         private string _lastUpdatedFolder;
         private string _lastReadVersion;
@@ -32,13 +33,13 @@ namespace AssemblyUpdater
         {
             _versionsMismatch = new List<string>();
 
-            SetupCommand = new RelayCommand(x=> !IsBusy, x=> Setup());
+            SetupCommand = new RelayCommand(x => !IsBusy, x => Setup());
             CmdUpdateSingleFile = new RelayCommand(x => !IsBusy, x => UpdateSingleFileWithNotification((AssemblyFileItem)x));
 
             CmdUpdateSingleFile = new RelayCommand(x => !IsBusy, x => UpdateSingleFileWithNotification((AssemblyFileItem)x));
             CmdUpdateVersion = new RelayCommand(x => !IsBusy, x => ExecuteUpdateVersion());
             CmdRefreshVersion = new RelayCommand(x => !IsBusy, x => ExecuteRefreshVersion());
-            CmdSwitchFramework = new RelayCommand(x => !IsBusy, x => ExecuteSwitchFramework());
+            CmdUpdateFramework = new RelayCommand(x => !IsBusy, x => ExecuteUpdateFrameworkVersion());
 
             IsBusy = true;
 
@@ -48,7 +49,7 @@ namespace AssemblyUpdater
         }
 
         public ICommand SetupCommand { get; set; }
-        public ICommand CmdSwitchFramework { get; set; }
+        public ICommand CmdUpdateFramework { get; set; }
         public ICommand CmdUpdateSingleFile { get; set; }
         public ICommand CmdUpdateVersion { get; set; }
         public ICommand CmdRefreshVersion { get; set; }
@@ -136,15 +137,15 @@ namespace AssemblyUpdater
             }
         }
 
-        public ObservableCollection<FrameworkProjectItem> ProjectToUpdate
+        public ObservableCollection<FrameworkProjectItem> ProjectsToUpdateList
         {
             get
             {
-                return _frameworkToUpdate;
+                return _projectsToUpdate;
             }
             set
             {
-                _frameworkToUpdate = value;
+                _projectsToUpdate = value;
                 OnPropertyChanged();
             }
         }
@@ -200,7 +201,7 @@ namespace AssemblyUpdater
                 {
                     CurrentlyUpdatedValues = 0;
                     FilesToUpdateList = new ObservableCollection<AssemblyFileItem>(await GetFilesToUpdate(newFolder));
-                    ProjectToUpdate = new ObservableCollection<FrameworkProjectItem>(await GetProjectsToUpdate(newFolder));
+                    ProjectsToUpdateList = new ObservableCollection<FrameworkProjectItem>(await GetProjectsToUpdate(newFolder));
 
                     if (_versionsMismatch.Count > 1)
                     {
@@ -319,7 +320,7 @@ namespace AssemblyUpdater
             var currFiles = Directory.GetFiles(rootDirectory);
             var fileToUpdate = currFiles.FirstOrDefault(x => Constants.PROJECT_REGEX.Any(x.Contains));
             var myRegex = new Regex(Constants.PROJECT_REGEX);
-            var resultList = currFiles.Where(x => myRegex.IsMatch(x)).ToList();  
+            var resultList = currFiles.Where(x => myRegex.IsMatch(x)).ToList();
             fileToUpdate = resultList.FirstOrDefault();
 
             if (fileToUpdate == null)
@@ -359,13 +360,15 @@ namespace AssemblyUpdater
         {
             if (!string.IsNullOrEmpty(relativeFilePath) && !string.IsNullOrEmpty(SolutionPath))
             {
-                string[] readText = File.ReadAllLines(SolutionPath + relativeFilePath);
                 string frameworkVersion = string.Empty;
+                XmlDocument xmlDoc = new XmlDocument();
+                xmlDoc.LoadXml(File.ReadAllText(SolutionPath + relativeFilePath));
+                XmlNamespaceManager mgr = new XmlNamespaceManager(xmlDoc.NameTable);
+                mgr.AddNamespace("x", "http://schemas.microsoft.com/developer/msbuild/2003");
 
-                var versionInfoLines = readText.Where(t => t.Contains("<TargetFrameworkVersion>"));
-                foreach (string item in versionInfoLines)
+                foreach (XmlNode item in xmlDoc.SelectNodes("//x:TargetFrameworkVersion", mgr))
                 {
-                    frameworkVersion = item.Substring(item.IndexOf('>') + 2, item.Length - item.LastIndexOf('<'));
+                    frameworkVersion = item.InnerText.ToString();
                 }
 
                 return frameworkVersion;
@@ -374,7 +377,27 @@ namespace AssemblyUpdater
             return "0.0";
         }
 
-            private string ReadVersion(string relativeFilePath)
+        private void WriteFrameworkVersion(string relativeFilePath, string newFrameworkVersion)
+        {
+            if (!string.IsNullOrEmpty(relativeFilePath) && !string.IsNullOrEmpty(SolutionPath))
+            {
+                string frameworkVersion = string.Empty;
+                XmlDocument xmlDoc = new XmlDocument();
+                xmlDoc.LoadXml(File.ReadAllText(SolutionPath + relativeFilePath));
+                XmlNamespaceManager mgr = new XmlNamespaceManager(xmlDoc.NameTable);
+                mgr.AddNamespace("x", "http://schemas.microsoft.com/developer/msbuild/2003");
+
+                foreach (XmlNode item in xmlDoc.SelectNodes("//x:TargetFrameworkVersion", mgr))
+                {
+                    item.InnerText = newFrameworkVersion;
+                }
+
+                xmlDoc.Save(SolutionPath + relativeFilePath);
+            }
+
+        }
+
+        private string ReadVersion(string relativeFilePath)
         {
             if (!string.IsNullOrEmpty(relativeFilePath) && !string.IsNullOrEmpty(SolutionPath))
             {
@@ -472,18 +495,6 @@ namespace AssemblyUpdater
             }
         }
 
-        private async void ExecuteSwitchFramework()
-        {
-            if (!IsBusy)
-            {
-                IsBusy = true;
-
-                await LoadDataFromFolder(SolutionPath, true);
-
-                IsBusy = false;
-            }
-        }
-
         public string GetReadableVersion(string[] arrayedVersion)
         {
             string readableVersion = string.Empty;
@@ -544,6 +555,17 @@ namespace AssemblyUpdater
             }
 
             IsBusy = false;
+        }
+
+        private async void ExecuteUpdateFrameworkVersion()
+        {
+            foreach (var item in ProjectsToUpdateList)
+            {
+                await Task.Run(() =>
+                {
+                    WriteFrameworkVersion(item.Project, "v4.8");
+                });
+            }
         }
 
         public void UpdateSingleFileWithNotification(AssemblyFileItem item)
