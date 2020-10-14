@@ -19,17 +19,82 @@
             <Grid.RowDefinitions>
                 <RowDefinition Height="Auto" />
                 <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
                 <RowDefinition Height="*" />
                 <RowDefinition Height="Auto" />
             </Grid.RowDefinitions>
 
                        
             <uc:ConfigHeader />
-                    
-                    
+            <StackPanel  Grid.Row="1" HorizontalAlignment="Left" Orientation="Horizontal" Margin="0,10,0,0">
+                <TextBlock
+                    Margin="0,5,10,0"
+                    HorizontalAlignment="Left"
+                    Text="Version Read" />
+
+                <TextBox
+                        PreviewTextInput="VersionTextChanged"
+                        Style="{StaticResource VersionTextBoxStyle}"
+                                                IsEnabled="False"
+                        Text="{Binding DisplayedVersion[0]}" />
+                <TextBox
+                        PreviewTextInput="VersionTextChanged"
+                        Style="{StaticResource VersionTextBoxStyle}"
+                                                IsEnabled="False"
+
+                        Text="{Binding DisplayedVersion[1]}" />
+                <TextBox
+                        PreviewTextInput="VersionTextChanged"
+                        Style="{StaticResource VersionTextBoxStyle}"
+                                                IsEnabled="False"
+                        Text="{Binding DisplayedVersion[2]}" />
+                <TextBox
+                        MinWidth="64"
+                        MaxLength="5"
+                        PreviewTextInput="VersionTextChanged"
+                        Style="{StaticResource VersionTextBoxStyle}"
+                        IsEnabled="False"
+                        Text="{Binding DisplayedVersion[3]}" />
+
+
+
+                <Button
+                        Width="28"
+                        Margin="50,0,0,0"
+                        HorizontalContentAlignment="Center"
+                        VerticalContentAlignment="Center"
+                        Command="{Binding CmdRefreshVersion}"
+                        Content="&#xE72C;"
+                        FontFamily="Segoe MDL2 Assets" />
+
+                <TextBlock
+                    Margin="40,5,10,0"
+                    HorizontalAlignment="Right"
+                    Text="Version Write" />
+
+                <TextBox
+                        PreviewTextInput="VersionTextChanged"
+                        Style="{StaticResource VersionTextBoxStyle}"
+                        Text="{Binding ToWriteVersion[0]}" />
+                <TextBox
+                        PreviewTextInput="VersionTextChanged"
+                        Style="{StaticResource VersionTextBoxStyle}"
+                        Text="{Binding ToWriteVersion[1]}" />
+                <TextBox
+                        PreviewTextInput="VersionTextChanged"
+                        Style="{StaticResource VersionTextBoxStyle}"
+                        Text="{Binding ToWriteVersion[2]}" />
+                <TextBox
+                        MinWidth="64"
+                        MaxLength="5"
+                        PreviewTextInput="VersionTextChanged"
+                        Style="{StaticResource VersionTextBoxStyle}"
+                        Text="{Binding ToWriteVersion[3]}" />
+
+            </StackPanel>
 
             <Button
-                Grid.Row="1"
+                Grid.Row="2"
                 Height="28"
                 Margin="0,12,0,0"
                 VerticalContentAlignment="Center"
@@ -44,7 +109,7 @@
                 AutoGenerateColumns="False"
                 GridLinesVisibility="None"
                 x:Name="FileUpdateListView"
-                Grid.Row="2"
+                Grid.Row="3"
                 ItemsSource="{Binding FilesToUpdateList}" >
                  
                 <DataGrid.Columns>
@@ -72,7 +137,7 @@
 
             <TextBlock
                 x:Name="NumFilesFound"
-                Grid.Row="3"
+                Grid.Row="5"
                 Margin="0,4,0,0"
                 FontSize="14"
                 Text="{Binding FilesToUpdateList.Count, Converter={StaticResource TextWithDescriptionConverter}, ConverterParameter='Found files: '}" />

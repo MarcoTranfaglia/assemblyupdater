@@ -23,14 +23,15 @@ namespace AssemblyUpdater
         private string _lastReadVersion;
         private List<string> _versionsMismatch;
 
-        private string _solutionFilename;
-        private string[] _displayedVersion;
-        private string[] _toWriteVersion;
+        private string _solutionFilename, _solutionPath;
+        private string[] _displayedVersion, _toWriteVersion, _displayedFrameworkVersion, _toWriteFrameworkVersion;
 
         private double _currentlyUpdatedValues;
 
         public MainWindowPageViewModel()
         {
+            SolutionPath = Settings.Default.LastUsedDirectory;
+
             _versionsMismatch = new List<string>();
 
             SetupCommand = new RelayCommand(x => !IsBusy, x => Setup());
@@ -72,7 +73,12 @@ namespace AssemblyUpdater
         {
             get
             {
-                return Settings.Default.LastUsedDirectory;
+                return _solutionPath;
+            }
+            set
+            {
+                _solutionPath = value;
+                OnPropertyChanged();
             }
         }
 
@@ -87,41 +93,6 @@ namespace AssemblyUpdater
                 _solutionFilename = value;
                 OnPropertyChanged();
             }
-        }
-
-        private void Setup(bool forceInitialization = false)
-        {
-            var dlg = new SetupDlg();
-            var dlgRes = dlg.ShowDialog();
-
-            if (dlgRes == true)
-            {
-                if (InitializeApp())
-                {
-                    MessageBox.Show("The settings have been updated.");
-                }
-                else
-                {
-                    Setup(true);
-                }
-            }
-            else if (forceInitialization)
-            {
-                MessageBox.Show("You can't continue until all configuration values are set up.");
-                Setup(true);
-            }
-        }
-
-        private bool InitializeApp()
-        {
-            if (string.IsNullOrEmpty(SolutionPath))
-            {
-                MessageBox.Show("Setup all the configuration values before proceeding.");
-                return false;
-            }
-
-            LoadDataFromFolder(SolutionPath, true);
-            return true;
         }
 
         public ObservableCollection<AssemblyFileItem> FilesToUpdateList
@@ -176,6 +147,32 @@ namespace AssemblyUpdater
             }
         }
 
+        public string[] DisplayedFrameworkVersion
+        {
+            get
+            {
+                return _displayedFrameworkVersion;
+            }
+            set
+            {
+                _displayedFrameworkVersion = value;
+                OnPropertyChanged();
+            }
+        }
+
+        public string[] ToWriteFrameworkVersion
+        {
+            get
+            {
+                return _toWriteFrameworkVersion;
+            }
+            set
+            {
+                _toWriteFrameworkVersion = value;
+                OnPropertyChanged();
+            }
+        }
+
         public double CurrentlyUpdatedValues
         {
             get
@@ -200,6 +197,7 @@ namespace AssemblyUpdater
                 if (CheckForSlnFiles(newFolder))
                 {
                     CurrentlyUpdatedValues = 0;
+
                     FilesToUpdateList = new ObservableCollection<AssemblyFileItem>(await GetFilesToUpdate(newFolder));
                     ProjectsToUpdateList = new ObservableCollection<FrameworkProjectItem>(await GetProjectsToUpdate(newFolder));
 
@@ -211,11 +209,15 @@ namespace AssemblyUpdater
 
                     if (FilesToUpdateList.Any())
                     {
-                        if (UpdateVersion(updateVersionField))
+                        if (UpdateVersionFields(updateVersionField))
                         {
-                            Settings.Default.LastUsedDirectory = newFolder;
-                            Settings.Default.Save();
-
+                            return true;
+                        }
+                    }
+                    if (ProjectsToUpdateList.Any())
+                    {
+                        if (UpdateFrameworkVersionFields(updateVersionField))
+                        {
                             return true;
                         }
                     }
@@ -225,8 +227,11 @@ namespace AssemblyUpdater
             {
                 System.Windows.Forms.MessageBox.Show(e.Message, "Error");
                 FilesToUpdateList = null;
+                ProjectsToUpdateList = null;
                 DisplayedVersion = null;
                 ToWriteVersion = null;
+                DisplayedFrameworkVersion = null;
+                ToWriteFrameworkVersion = null;
             }
 
             return false;
@@ -251,6 +256,8 @@ namespace AssemblyUpdater
 
                 FilesToUpdateList = null;
                 DisplayedVersion = null;
+                ProjectsToUpdateList = null;
+                DisplayedFrameworkVersion = null;
 
                 return false;
             }
@@ -308,8 +315,7 @@ namespace AssemblyUpdater
                 resList.Add(item);
             }
 
-            // _lastReadVersion = frameworkVersion;
-            // DisplayedVersion = frameworkVersion.Split('.');
+            DisplayedFrameworkVersion = frameworkVersion.Split('.');
             return resList;
         }
 
@@ -369,6 +375,12 @@ namespace AssemblyUpdater
                 foreach (XmlNode item in xmlDoc.SelectNodes("//x:TargetFrameworkVersion", mgr))
                 {
                     frameworkVersion = item.InnerText.ToString();
+                }
+
+
+                if (DisplayedFrameworkVersion == null)
+                {
+                    DisplayedFrameworkVersion = frameworkVersion.Split(".");
                 }
 
                 return frameworkVersion;
@@ -472,12 +484,23 @@ namespace AssemblyUpdater
         }
 
 
-        private bool UpdateVersion(bool updateVersionField)
+        private bool UpdateVersionFields(bool updateVersionField)
         {
             if (updateVersionField)
             {
                 DisplayedVersion = FilesToUpdateList.LastOrDefault()?.Version.Split('.');
-                ToWriteVersion = FilesToUpdateList.FirstOrDefault()?.Version.Split('.'); //TODO
+                ToWriteVersion = FilesToUpdateList.FirstOrDefault()?.Version.Split('.'); 
+                return true;
+            }
+            return true;
+        }
+
+        private bool UpdateFrameworkVersionFields(bool updateVersionField)
+        {
+            if (updateVersionField)
+            {
+                DisplayedFrameworkVersion = ProjectsToUpdateList.LastOrDefault()?.Framework.Split('.');
+                ToWriteFrameworkVersion = ProjectsToUpdateList.FirstOrDefault()?.Framework.Split('.'); 
                 return true;
             }
             return true;
@@ -493,21 +516,6 @@ namespace AssemblyUpdater
 
                 IsBusy = false;
             }
-        }
-
-        public string GetReadableVersion(string[] arrayedVersion)
-        {
-            string readableVersion = string.Empty;
-            readableVersion = arrayedVersion[0] + "." + arrayedVersion[1];
-            if (arrayedVersion.Length > 2)
-            {
-                readableVersion += "." + arrayedVersion[2];
-            }
-            if (arrayedVersion.Length > 3)
-            {
-                readableVersion += "." + arrayedVersion[3];
-            }
-            return readableVersion;
         }
 
         private async void ExecuteUpdateVersion()
@@ -540,7 +548,7 @@ namespace AssemblyUpdater
                         }
 
                         _lastReadVersion = newVersion;
-                        UpdateVersion(true);
+                        UpdateVersionFields(true);
                         System.Windows.Forms.MessageBox.Show(Resources.OPERATION_COMPLETED);
                     }
                     else
@@ -559,11 +567,15 @@ namespace AssemblyUpdater
 
         private async void ExecuteUpdateFrameworkVersion()
         {
+            string frameworkVersionToWrite = "v" + ToWriteFrameworkVersion[0] + "." + ToWriteFrameworkVersion[1]
+                + ToWriteFrameworkVersion[2] != null ? "."+ToWriteFrameworkVersion[2] : "";
             foreach (var item in ProjectsToUpdateList)
             {
                 await Task.Run(() =>
                 {
-                    WriteFrameworkVersion(item.Project, "v4.8");
+                    WriteFrameworkVersion(item.Project, frameworkVersionToWrite);
+                    UpdateFrameworkVersionFields(true);
+                    System.Windows.Forms.MessageBox.Show(Resources.OPERATION_COMPLETED);
                 });
             }
         }
@@ -575,6 +587,39 @@ namespace AssemblyUpdater
             System.Windows.Forms.MessageBox.Show(Resources.OPERATION_COMPLETED);
         }
 
+        private bool InitializeApp()
+        {
+            if (string.IsNullOrEmpty(SolutionPath))
+            {
+                MessageBox.Show("Setup all the configuration values before proceeding.");
+                return false;
+            }
+
+            LoadDataFromFolder(SolutionPath, true);
+            return true;
+        }
+        private void Setup(bool forceInitialization = false)
+        {
+            var dlg = new SetupDlg();
+            var dlgRes = dlg.ShowDialog();
+            SolutionPath = Settings.Default.LastUsedDirectory;
+            if (dlgRes == true)
+            {
+                if (InitializeApp())
+                {
+                    MessageBox.Show("The settings have been updated.");
+                }
+                else
+                {
+                    Setup(true);
+                }
+            }
+            else if (forceInitialization)
+            {
+                MessageBox.Show("You can't continue until all configuration values are set up.");
+                Setup(true);
+            }
+        }
 
     }
 }

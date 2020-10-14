@@ -10,7 +10,7 @@
     x:Name="MainWindowView"
     Title="NET Framework Projects Manager"
     Width="700"
-    Height="480"
+    Height="530"
     mc:Ignorable="d">
 
 
