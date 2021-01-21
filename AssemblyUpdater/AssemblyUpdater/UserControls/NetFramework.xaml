@@ -36,19 +36,8 @@
                         PreviewTextInput="VersionTextChanged"
                         Style="{StaticResource VersionTextBoxStyle}"
                                                 IsEnabled="False"
-                        Text="{Binding DisplayedFrameworkVersion[0]}" />
-                <TextBox
-                        PreviewTextInput="VersionTextChanged"
-                        Style="{StaticResource VersionTextBoxStyle}"
-                                                IsEnabled="False"
-
-                        Text="{Binding DisplayedFrameworkVersion[1]}" />
-                <TextBox
-                        PreviewTextInput="VersionTextChanged"
-                        Style="{StaticResource VersionTextBoxStyle}"
-                                                IsEnabled="False"
-                        Text="{Binding DisplayedFrameworkVersion[2]}" />
-
+                        Text="{Binding DisplayedFrameworkVersion}" />
+               
                 <Button
                         Width="28"
                         Margin="50,0,0,0"
@@ -65,17 +54,9 @@
 
                 <TextBox
                         PreviewTextInput="VersionTextChanged"
-                        Style="{StaticResource VersionTextBoxStyle}"
-                        Text="{Binding ToWriteFrameworkVersion[0]}" />
-                <TextBox
-                        PreviewTextInput="VersionTextChanged"
-                        Style="{StaticResource VersionTextBoxStyle}"
-                        Text="{Binding ToWriteFrameworkVersion[1]}" />
-                <TextBox
-                        PreviewTextInput="VersionTextChanged"
-                        Style="{StaticResource VersionTextBoxStyle}"
-                        Text="{Binding ToWriteFrameworkVersion[2]}" />
-
+                        Width="100"
+                        Text="{Binding ToWriteFrameworkVersion}" />
+              
             </StackPanel>
 
 
@@ -99,13 +80,21 @@
                 ItemsSource="{Binding ProjectsToUpdateList}" >
                  
                 <DataGrid.Columns>
-                    <DataGridTextColumn Header="Version"  Width="100" IsReadOnly="True" Binding="{Binding Framework}">
+                    <DataGridTextColumn Header="Version"  Width="60" IsReadOnly="True" Binding="{Binding FrameworkVersion}">
                         <DataGridTextColumn.ElementStyle>
                             <Style TargetType="TextBlock">
                                 <Setter Property="HorizontalAlignment" Value="Center" />
                             </Style>
                         </DataGridTextColumn.ElementStyle>
                     </DataGridTextColumn>
+
+                    <DataGridTextColumn Header="Type" Width="80" IsReadOnly="True" Binding="{Binding FrameworkType}" >
+                        <DataGridTextColumn.ElementStyle>
+                            <Style TargetType="TextBlock">
+                                <Setter Property="HorizontalAlignment" Value="Center" />
+                            </Style>
+                        </DataGridTextColumn.ElementStyle>
+                     </DataGridTextColumn>
 
                     <DataGridTextColumn Header="File" Width="Auto" IsReadOnly="True" Binding="{Binding Project}" />
 

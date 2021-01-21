@@ -3,7 +3,8 @@
     public class FrameworkProjectItem : NotifyBase
     {
         private string _project;
-        private string _framework;
+        private string _frameworkVersion;
+        private MicrosoftFrameworkType _frameworkType;
 
         public string Project
         {
@@ -18,15 +19,28 @@
             }
         }
 
-        public string Framework
+        public string FrameworkVersion
         {
             get
             {
-                return _framework;
+                return _frameworkVersion;
             }
             set
             {
-                _framework = value;
+                _frameworkVersion = value;
+                OnPropertyChanged();
+            }
+        }
+
+        public MicrosoftFrameworkType FrameworkType
+        {
+            get
+            {
+                return _frameworkType;
+            }
+            set
+            {
+                _frameworkType = value;
                 OnPropertyChanged();
             }
         }
