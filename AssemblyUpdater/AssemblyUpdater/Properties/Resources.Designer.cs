@@ -79,6 +79,15 @@ namespace AssemblyUpdater.Properties {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to Please fill the version field in the form.
+        /// </summary>
+        internal static string FILL_VERSION_FIELD {
+            get {
+                return ResourceManager.GetString("FILL_VERSION_FIELD", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized string similar to Path {0} is not correct.
         /// </summary>
         internal static string INCORRECT_PATH {

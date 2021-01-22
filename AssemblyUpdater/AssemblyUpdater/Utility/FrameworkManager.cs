@@ -54,30 +54,36 @@ namespace AssemblyUpdater.Utility
         {
             FrameworkProjectItem frameworkItem = new FrameworkProjectItem();
             SetMsBuildExePath();
-            string targetFramework = string.Empty;
             string frameworkVersion = string.Empty;
             var collection = new ProjectCollection();
 
             var project = new Project(absoluteFilePath, null, null, collection, ProjectLoadSettings.IgnoreMissingImports);
 
-            targetFramework = project.GetProperty("TargetFramework") != null ? project.GetProperty("TargetFramework").EvaluatedValue : "";
+            frameworkItem.FrameworkType = ReadFrameworkType(project);
+            frameworkItem.FrameworkVersion = project.GetProperty("TargetFrameworkVersion").EvaluatedValue;
+            frameworkItem.ProjectFullPath = absoluteFilePath;
+            return frameworkItem;
+        }
+
+        public static MicrosoftFrameworkType ReadFrameworkType(Project project)
+        {
+            MicrosoftFrameworkType frameworkType;
+            string targetFramework = project.GetProperty("TargetFramework") != null ? project.GetProperty("TargetFramework").EvaluatedValue : "";
 
             if (targetFramework.StartsWith("netcoreapp"))
             {
-                frameworkItem.FrameworkType = MicrosoftFrameworkType.NETCore;
+                frameworkType = MicrosoftFrameworkType.NETCore;
             }
             else if (targetFramework.StartsWith("netstandard"))
             {
-                frameworkItem.FrameworkType = MicrosoftFrameworkType.NETStandard;
+                frameworkType = MicrosoftFrameworkType.NETStandard;
             }
             else
             {
-                frameworkItem.FrameworkType = MicrosoftFrameworkType.NETFramework;
+                frameworkType = MicrosoftFrameworkType.NETFramework;
             }
 
-            frameworkItem.FrameworkVersion = project.GetProperty("TargetFrameworkVersion").EvaluatedValue;
-            frameworkItem.Project = Path.GetFileName(absoluteFilePath);
-            return frameworkItem;
+            return frameworkType;
         }
 
         public static string ReadFrameworkVersion(string absoluteFilePath)
@@ -114,6 +120,23 @@ namespace AssemblyUpdater.Utility
             }
 
             return "0.0";
+        }
+
+        public static void WriteAssemblyFrameworkVersion(string absoluteFilePath, string newAssemblyVersion)
+        {
+            SetMsBuildExePath();
+
+            if (!string.IsNullOrEmpty(absoluteFilePath))
+            {
+                string frameworkVersion = string.Empty;
+                var collection = new ProjectCollection();
+                // var project = collection.LoadProject(absoluteFilePath);
+                var project = new Project(absoluteFilePath, null, null, collection, ProjectLoadSettings.IgnoreMissingImports);
+
+                project.SetProperty("Version", newAssemblyVersion);
+                project.Save();
+            }
+
         }
 
         public static void WriteFrameworkVersion(string absoluteFilePath, string newFrameworkVersion)

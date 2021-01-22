@@ -1,22 +1,36 @@
-﻿namespace AssemblyUpdater.Models
+﻿using System.IO;
+
+namespace AssemblyUpdater.Models
 {
     public class FrameworkProjectItem : NotifyBase
     {
-        private string _project;
+        private string _projectFullPath;
         private string _frameworkVersion;
+        private string _assemblyVersion;
+        private string _assemblyFile;
         private MicrosoftFrameworkType _frameworkType;
+
+
+        public string ProjectFullPath
+        {
+            get
+            {
+                return _projectFullPath;
+            }
+            set
+            {
+                _projectFullPath = value;
+                OnPropertyChanged();
+            }
+        }
 
         public string Project
         {
             get
             {
-                return _project;
+                return Path.GetFileNameWithoutExtension(_projectFullPath);
             }
-            set
-            {
-                _project = value;
-                OnPropertyChanged();
-            }
+            
         }
 
         public string FrameworkVersion
@@ -41,6 +55,32 @@
             set
             {
                 _frameworkType = value;
+                OnPropertyChanged();
+            }
+        }
+
+        public string AssemblyVersion
+        {
+            get
+            {
+                return _assemblyVersion;
+            }
+            set
+            {
+                _assemblyVersion = value;
+                OnPropertyChanged();
+            }
+        }
+
+        public string AssemblyFile
+        {
+            get
+            {
+                return _assemblyFile;
+            }
+            set
+            {
+                _assemblyFile = value;
                 OnPropertyChanged();
             }
         }

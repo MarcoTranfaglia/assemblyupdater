@@ -56,7 +56,9 @@
 
                 <TextBox
                         PreviewTextInput="VersionTextChanged"
-                        Width="100"
+                        Style="{StaticResource VersionTextBoxStyle}"
+                     IsEnabled="True"
+                    Width="150"
                         Text="{Binding ToWriteVersion}" />
              
 
@@ -79,10 +81,10 @@
                 GridLinesVisibility="None"
                 x:Name="FileUpdateListView"
                 Grid.Row="3"
-                ItemsSource="{Binding FilesToUpdateList}" >
+                ItemsSource="{Binding ProjectsToUpdateList}" >
                  
                 <DataGrid.Columns>
-                    <DataGridTextColumn Header="Version"  Width="100" IsReadOnly="True" Binding="{Binding Version}">
+                    <DataGridTextColumn Header="Version"  Width="100" IsReadOnly="True" Binding="{Binding AssemblyVersion}">
                         <DataGridTextColumn.ElementStyle>
                             <Style TargetType="TextBlock">
                                 <Setter Property="HorizontalAlignment" Value="Center" />
@@ -90,7 +92,7 @@
                         </DataGridTextColumn.ElementStyle>
                     </DataGridTextColumn>
 
-                    <DataGridTextColumn Header="File" Width="Auto" IsReadOnly="True" Binding="{Binding File}" />
+                    <DataGridTextColumn Header="Project" Width="Auto" IsReadOnly="True" Binding="{Binding Project}" />
 
                     <DataGridTemplateColumn Width="100">
                         <DataGridTemplateColumn.CellTemplate>
@@ -109,7 +111,7 @@
                 Grid.Row="5"
                 Margin="0,4,0,0"
                 FontSize="14"
-                Text="{Binding FilesToUpdateList.Count, Converter={StaticResource TextWithDescriptionConverter}, ConverterParameter='Found files: '}" />
+                Text="{Binding ProjectsToUpdateList.Count, Converter={StaticResource TextWithDescriptionConverter}, ConverterParameter='Projects found: '}" />
         </Grid>
 
 
@@ -117,7 +119,7 @@
             Grid.Row="1"
             Height="20"
             IsIndeterminate="False"
-            Maximum="{Binding FilesToUpdateList.Count}"
+            Maximum="{Binding ProjectsToUpdateList.Count}"
             Minimum="0"
             Value="{Binding CurrentlyUpdatedValues}" />
 

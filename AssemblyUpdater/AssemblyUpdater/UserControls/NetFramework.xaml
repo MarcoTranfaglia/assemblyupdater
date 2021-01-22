@@ -54,8 +54,9 @@
 
                 <TextBox
                         PreviewTextInput="VersionTextChanged"
-                        Width="100"
-                        Text="{Binding ToWriteFrameworkVersion}" />
+                  Style="{StaticResource VersionTextBoxStyle}"
+                                                IsEnabled="True"
+                    Text="{Binding ToWriteFrameworkVersion}" />
               
             </StackPanel>
 
@@ -96,7 +97,15 @@
                         </DataGridTextColumn.ElementStyle>
                      </DataGridTextColumn>
 
-                    <DataGridTextColumn Header="File" Width="Auto" IsReadOnly="True" Binding="{Binding Project}" />
+                    <DataGridTextColumn Header="Project" Width="Auto" IsReadOnly="True" Binding="{Binding Project}" />
+
+                    <DataGridTemplateColumn Width="100">
+                        <DataGridTemplateColumn.CellTemplate>
+                            <DataTemplate>
+                                <Button CommandParameter="{Binding}" Command="{Binding Path=DataContext.CmdUpdateSingleFramework,  RelativeSource= {RelativeSource FindAncestor, AncestorType={x:Type DataGrid}}}">Update</Button>
+                            </DataTemplate>
+                        </DataGridTemplateColumn.CellTemplate>
+                    </DataGridTemplateColumn>
 
 
                 </DataGrid.Columns>
@@ -108,7 +117,7 @@
                 Grid.Row="4"
                 Margin="0,4,0,0"
                 FontSize="14"
-                Text="{Binding ProjectsToUpdateList.Count, Converter={StaticResource TextWithDescriptionConverter}, ConverterParameter='Found files: '}" />
+                Text="{Binding ProjectsToUpdateList.Count, Converter={StaticResource TextWithDescriptionConverter}, ConverterParameter='Projects found: '}" />
         </Grid>
 
 

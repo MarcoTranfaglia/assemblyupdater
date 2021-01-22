@@ -14,44 +14,41 @@ namespace AssemblyUpdater.Utility
         public static string LookForAssemblyInfo(string projectDirectory)
         {
             string directory = Path.GetDirectoryName(projectDirectory);
-            string propertiesDirectory = Path.Combine(directory, "Properties");
-            var currFiles = Directory.GetFiles(propertiesDirectory);
 
-            return currFiles.FirstOrDefault(x => Constants.ASSEMBLYINFO_FILES.Any(x.Contains));
-        }
+            //Read in current directory 
+            var currFiles = Directory.GetFiles(directory);
+            var toReturn = currFiles.FirstOrDefault(x => Constants.ASSEMBLYINFO_FILES.Any(x.Contains));
 
-        public static List<string> LookForAssemblyInfosRecurse(string rootDirectory)
-        {
-            List<string> filesToUpdate = new List<string>();
-
-            var currFiles = Directory.GetFiles(rootDirectory);
-
-
-            var fileToUpdate = currFiles.FirstOrDefault(x => Constants.ASSEMBLYINFO_FILES.Any(x.Contains));
-
-            if (fileToUpdate == null)
+            if (!string.IsNullOrEmpty(toReturn))
             {
-                var currDirectories = Directory.GetDirectories(rootDirectory);
-                Parallel.ForEach(currDirectories, x => filesToUpdate.AddRange(LookForAssemblyInfosRecurse(x)));
+                return toReturn;
             }
             else
             {
-                filesToUpdate.Add(fileToUpdate);
+                //or in Properties directory
+                string propertiesDirectory = Path.Combine(directory, "Properties");
+                if (Directory.Exists(propertiesDirectory))
+                {
+                    currFiles = Directory.GetFiles(propertiesDirectory);
+
+                    return currFiles.FirstOrDefault(x => Constants.ASSEMBLYINFO_FILES.Any(x.Contains));
+                }
             }
 
-            return filesToUpdate;
+            return string.Empty;
+
         }
 
-        public static AssemblyFileItem ReadSingleAssemblyInfoFile(string absolutePathProjectFile )
+        public static FrameworkProjectItem ReadSingleAssemblyInfoFile(FrameworkProjectItem projectItem)
         {
-            string assemblyInfoFile = FileManagement.LookForAssemblyInfo(absolutePathProjectFile);
+            string assemblyInfoFile = FileManagement.LookForAssemblyInfo(projectItem.ProjectFullPath);
             string assemblyVersion = string.Empty;
             string assemblyVersionFile = string.Empty;
 
             if (!string.IsNullOrEmpty(assemblyInfoFile))
             {
                 string[] readText = File.ReadAllLines(assemblyInfoFile);
-             
+
 
                 //C#
                 var versionInfoLines = readText.Where(t => t.Contains("[assembly: AssemblyVersion") && !t.StartsWith("//"));
@@ -83,17 +80,32 @@ namespace AssemblyUpdater.Utility
 
             }
 
-            AssemblyFileItem fileItem = new AssemblyFileItem();
-            fileItem.File = Path.GetFileNameWithoutExtension(absolutePathProjectFile);
-            fileItem.Version = assemblyVersion;
-            return fileItem;
+            projectItem.AssemblyFile = assemblyInfoFile;
+            projectItem.AssemblyVersion = assemblyVersion;
+            return projectItem;
         }
 
-        public static void UpdateSingleVersion(AssemblyFileItem item, string newVersion, string solutionPath, List<string> _versionsMismatch, double CurrentlyUpdatedValues)
+        public static void UpdateSingleVersion(FrameworkProjectItem item, string newVersion, double CurrentlyUpdatedValues)
         {
-            string file = item.File;
-            var completeFilePath = Path.Combine(solutionPath, file);
+            
+            if (item.FrameworkType == MicrosoftFrameworkType.NETCore || item.FrameworkType == MicrosoftFrameworkType.NETStandard)
+            {
+                if (!string.IsNullOrEmpty(item.ProjectFullPath))
+                FrameworkManager.WriteAssemblyFrameworkVersion(item.ProjectFullPath, newVersion);
+            }
+            else
+            {
+                if (!string.IsNullOrEmpty(item.AssemblyVersion))
+                    UpdateSingleAssemblyFile(item, newVersion);
+            }
 
+            CurrentlyUpdatedValues++;
+
+        }
+
+        private static void UpdateSingleAssemblyFile(FrameworkProjectItem item, string newVersion)
+        {
+            string completeFilePath = item.AssemblyFile;
             var readText = File.ReadAllText(completeFilePath);
             string[] readLines = File.ReadAllLines(completeFilePath);
             string result = readText;
@@ -101,26 +113,26 @@ namespace AssemblyUpdater.Utility
             //Check AssemblyVersion or AssemblyFileVersion are totally missing
             IEnumerable<string> versionInfoLines = null;
             IEnumerable<string> versionFileInfoLines = null;
-            if (item.File.EndsWith(".cs"))
+            if (item.AssemblyFile.EndsWith(".cs"))
             {
                 versionInfoLines = readLines.Where(t => t.Contains("[assembly: AssemblyVersion") && !t.StartsWith("//"));
                 versionFileInfoLines = readLines.Where(t => t.Contains("[assembly: AssemblyFileVersion") && !t.StartsWith("//"));
             }
-            else if (item.File.EndsWith(".cpp"))
+            else if (item.AssemblyFile.EndsWith(".cpp"))
             {
                 versionInfoLines = readLines.Where(t => t.Contains("[assembly:AssemblyVersionAttribute") && !t.StartsWith("//"));
                 versionFileInfoLines = readLines.Where(t => t.Contains("[assembly:AssemblyFileVersionAttribute") && !t.StartsWith("//"));
             }
 
-
+            //Check if are totally missing
             if (versionInfoLines.Count() == 0)
             {
                 result += "\n";
-                if (item.File.EndsWith(".cs"))
+                if (item.AssemblyFile.EndsWith(".cs"))
                 {
                     result += string.Format("[assembly: AssemblyVersion(\"{0}\")]", newVersion);
                 }
-                else if (item.File.EndsWith(".cpp"))
+                else if (item.AssemblyFile.EndsWith(".cpp"))
                 {
                     result += string.Format("[assembly:AssemblyVersionAttribute(\"{0}\")]", newVersion);
                 }
@@ -131,29 +143,28 @@ namespace AssemblyUpdater.Utility
                     {
                         result += "\n";
                     }
-                    if (item.File.EndsWith(".cs"))
+                    if (item.AssemblyFile.EndsWith(".cs"))
                     {
                         result += string.Format("[assembly: AssemblyFileVersion(\"{0}\")]", newVersion);
                     }
-                    else if (item.File.EndsWith(".cpp"))
+                    else if (item.AssemblyFile.EndsWith(".cpp"))
                     {
                         result += string.Format("[assembly:AssemblyFileVersionAttribute(\"{0}\")]", newVersion);
                     }
 
                 }
             }
-
-            //Foreach because it should owerwrite all the mismatch versions
-            foreach (string mismatchVersion in _versionsMismatch)
+            else //just replace numbers
             {
-                result = result.Replace(mismatchVersion, newVersion);
+                result = result.Replace(item.AssemblyVersion, newVersion);
             }
 
             File.WriteAllText(completeFilePath, result);
-            item.Version = newVersion;
-
-            CurrentlyUpdatedValues++;
+            item.AssemblyVersion = newVersion;
         }
-    }
 
+
+
+    }
 }
+

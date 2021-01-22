@@ -18,7 +18,6 @@ namespace AssemblyUpdater
     {
         public bool _isBusy;
         private ObservableCollection<FrameworkProjectItem> _projectsToUpdate;
-        private ObservableCollection<AssemblyFileItem> _filesToUpdate;
         private string _lastUpdatedFolder;
         private string _lastReadVersion;
         private List<string> _versionsMismatch;
@@ -35,12 +34,13 @@ namespace AssemblyUpdater
             _versionsMismatch = new List<string>();
 
             SetupCommand = new RelayCommand(x => !IsBusy, x => Setup());
-            CmdUpdateSingleFile = new RelayCommand(x => !IsBusy, x => UpdateSingleFileWithNotification((AssemblyFileItem)x));
-
-            CmdUpdateSingleFile = new RelayCommand(x => !IsBusy, x => UpdateSingleFileWithNotification((AssemblyFileItem)x));
+            CmdUpdateSingleFile = new RelayCommand(x => !IsBusy, x => UpdateSingleFileWithNotification((FrameworkProjectItem)x));
             CmdUpdateVersion = new RelayCommand(x => !IsBusy, x => ExecuteUpdateVersion());
             CmdRefreshVersion = new RelayCommand(x => !IsBusy, x => ExecuteRefreshVersion());
             CmdUpdateFramework = new RelayCommand(x => !IsBusy, x => ExecuteUpdateFrameworkVersion());
+            CmdUpdateSingleFramework = new RelayCommand(x => !IsBusy, x => ExecuteUpdateSingleFrameworkWithNotification((FrameworkProjectItem)x));
+
+            
 
             IsBusy = true;
 
@@ -52,6 +52,8 @@ namespace AssemblyUpdater
         public ICommand SetupCommand { get; set; }
         public ICommand CmdUpdateFramework { get; set; }
         public ICommand CmdUpdateSingleFile { get; set; }
+        public ICommand CmdUpdateSingleFramework { get; set; }
+
         public ICommand CmdUpdateVersion { get; set; }
         public ICommand CmdRefreshVersion { get; set; }
 
@@ -91,19 +93,6 @@ namespace AssemblyUpdater
             set
             {
                 _solutionFilename = value;
-                OnPropertyChanged();
-            }
-        }
-
-        public ObservableCollection<AssemblyFileItem> FilesToUpdateList
-        {
-            get
-            {
-                return _filesToUpdate;
-            }
-            set
-            {
-                _filesToUpdate = value;
                 OnPropertyChanged();
             }
         }
@@ -197,11 +186,7 @@ namespace AssemblyUpdater
                 if (CheckForSlnFiles(newFolder))
                 {
                     CurrentlyUpdatedValues = 0;
-
-                    var applicationData = await GetApplicationData(newFolder);
-
-                    FilesToUpdateList = new ObservableCollection<AssemblyFileItem>(applicationData.AssemblyFiles);
-                    ProjectsToUpdateList = new ObservableCollection<FrameworkProjectItem>(applicationData.ProjectFiles);
+                    ProjectsToUpdateList = new ObservableCollection<FrameworkProjectItem>(await GetApplicationData(newFolder));
 
                     if (_versionsMismatch.Count > 1)
                     {
@@ -209,15 +194,13 @@ namespace AssemblyUpdater
                         System.Windows.Forms.MessageBox.Show(message, "Warning");
                     }
 
-                    if (FilesToUpdateList.Any())
+                    if (ProjectsToUpdateList.Any())
                     {
                         if (UpdateVersionFields(updateVersionField))
                         {
                             return true;
                         }
-                    }
-                    if (ProjectsToUpdateList.Any())
-                    {
+
                         if (UpdateFrameworkVersionFields(updateVersionField))
                         {
                             return true;
@@ -228,7 +211,6 @@ namespace AssemblyUpdater
             catch (Exception e)
             {
                 System.Windows.Forms.MessageBox.Show(e.Message, "Error");
-                FilesToUpdateList = null;
                 ProjectsToUpdateList = null;
                 DisplayedVersion = null;
                 ToWriteVersion = null;
@@ -256,7 +238,6 @@ namespace AssemblyUpdater
                     MessageBoxButton.OK,
                     MessageBoxImage.Warning);
 
-                FilesToUpdateList = null;
                 DisplayedVersion = null;
                 ProjectsToUpdateList = null;
                 DisplayedFrameworkVersion = null;
@@ -273,10 +254,8 @@ namespace AssemblyUpdater
         /// </summary>
         /// <param name="rootDirectory"></param>
         /// <returns></returns>
-        private async Task<ApplicationData> GetApplicationData(string rootDirectory)
+        private async Task<List<FrameworkProjectItem>> GetApplicationData(string rootDirectory)
         {
-            ApplicationData applicationData = new ApplicationData();
-            List<AssemblyFileItem> assemblyList = new List<AssemblyFileItem>();
             List<FrameworkProjectItem> projectsList = new List<FrameworkProjectItem>();
             string assemblyVersion = "";
             string frameworkVersion = "";
@@ -285,100 +264,45 @@ namespace AssemblyUpdater
             {
                 FrameworkProjectItem projectItem = FrameworkManager.ReadFramework(projectFile);
                 frameworkVersion = projectItem.FrameworkVersion;
-                projectsList.Add(projectItem);
 
                 if (projectItem.FrameworkType == MicrosoftFrameworkType.NETCore || projectItem.FrameworkType == MicrosoftFrameworkType.NETStandard)
                 {
-                    AssemblyFileItem item = new AssemblyFileItem();
-
-                    item.File = Path.GetFileNameWithoutExtension(projectFile);
-                    item.Version = FrameworkManager.ReadVersionFromProjectFile(projectFile);
-                    assemblyVersion = item.Version;
-                    assemblyList.Add(item);
+                    projectItem.AssemblyFile = string.Empty;
+                    projectItem.AssemblyVersion = FrameworkManager.ReadVersionFromProjectFile(projectFile);
+                    assemblyVersion = projectItem.AssemblyVersion;
                 }
                 else  //NET Framework
                 {
-                    AssemblyFileItem item = FileManagement.ReadSingleAssemblyInfoFile(projectFile);
+                    projectItem = FileManagement.ReadSingleAssemblyInfoFile(projectItem);
 
-                    assemblyVersion = item.Version;
-                    assemblyList.Add(item);
+                    assemblyVersion = projectItem.AssemblyVersion;
                 }
+
+                projectsList.Add(projectItem);
             }
 
             _lastReadVersion = assemblyVersion;
             DisplayedVersion = assemblyVersion;
             DisplayedFrameworkVersion = frameworkVersion;
-
-            applicationData.AssemblyFiles = assemblyList;
-            applicationData.ProjectFiles = projectsList;
-            return applicationData;
+ 
+            return projectsList;
         }
 
 
         private List<string> LookForProjects(string rootDirectory)
         {
-            string[] files = System.IO.Directory.GetFiles(rootDirectory, "*.csproj", SearchOption.AllDirectories);
-
+            List<string> files = System.IO.Directory.GetFiles(rootDirectory, "*.csproj", SearchOption.AllDirectories).ToList();
+            files.AddRange(System.IO.Directory.GetFiles(rootDirectory, "*.vcxproj", SearchOption.AllDirectories).ToList());
             return files.ToList();
         }
-
-
-
-
-        private string ReadVersion(string relativeFilePath)
-        {
-            if (!string.IsNullOrEmpty(relativeFilePath) && !string.IsNullOrEmpty(SolutionPath))
-            {
-                string absolutePath = Path.Combine(SolutionPath, relativeFilePath);
-                AssemblyFileItem fileItem = FileManagement.ReadSingleAssemblyInfoFile(absolutePath);
-                string assemblyVersion = fileItem.Version;
-                string assemblyVersionFile = fileItem.File;
-
-                if (assemblyVersion != assemblyVersionFile)
-                {
-                    string message = string.Format(Resources.VERSIONS_MISMATCH_FILE, absolutePath, assemblyVersion, assemblyVersionFile);
-                    System.Windows.Forms.MessageBox.Show(message, "Warning");
-                }
-
-                if (!string.IsNullOrEmpty(assemblyVersion))
-                {
-                    if (_lastReadVersion != assemblyVersion
-                        &&
-                        !_versionsMismatch.Contains(assemblyVersion)
-                        )
-                    {
-                        _versionsMismatch.Add(assemblyVersion);
-                    }
-
-                    if (DisplayedVersion == null)
-                    {
-                        DisplayedVersion = assemblyVersion;
-                    }
-                    return assemblyVersion;
-                }
-                else
-                {
-                    string message = String.Format(Resources.NO_ASSEMBLY_INFO, SolutionPath + relativeFilePath);
-                    System.Windows.Forms.MessageBox.Show(message, "Error");
-                    _versionsMismatch.Add(Constants.NO_ASSEMBLY_VERSION);
-                    return Constants.NO_ASSEMBLY_VERSION;
-                }
-            }
-            else
-            {
-                string message = string.Format(Resources.INCORRECT_PATH, SolutionPath + relativeFilePath);
-                System.Windows.Forms.MessageBox.Show(message, "Error");
-                return Constants.NO_ASSEMBLY_VERSION;
-            }
-        }
-
 
         private bool UpdateVersionFields(bool updateVersionField)
         {
             if (updateVersionField)
             {
-                DisplayedVersion = FilesToUpdateList.LastOrDefault()?.Version;
-                ToWriteVersion = FilesToUpdateList.FirstOrDefault()?.Version;
+                DisplayedVersion = ProjectsToUpdateList.LastOrDefault()?.AssemblyVersion;
+                ToWriteVersion = ProjectsToUpdateList.FirstOrDefault()?.AssemblyVersion;
+                ToWriteFrameworkVersion = ProjectsToUpdateList.FirstOrDefault()?.FrameworkVersion;
                 return true;
             }
             return true;
@@ -409,6 +333,11 @@ namespace AssemblyUpdater
 
         private async void ExecuteUpdateVersion()
         {
+            if (string.IsNullOrEmpty(ToWriteVersion))
+            {
+                System.Windows.Forms.MessageBox.Show(Resources.FILL_VERSION_FIELD, "Error");
+                return;
+            }
             IsBusy = true;
             CurrentlyUpdatedValues = 0;
 
@@ -425,14 +354,13 @@ namespace AssemblyUpdater
                 if (!string.IsNullOrEmpty(_lastReadVersion))
                 {
                     if (!newVersion.Equals(_lastReadVersion)
-                        || _versionsMismatch.Count > 1)
+                      )
                     {
-                        foreach (var item in FilesToUpdateList)
+                        foreach (var item in ProjectsToUpdateList)
                         {
-                            var file = item.File;
                             await Task.Run(() =>
                             {
-                                FileManagement.UpdateSingleVersion(item, newVersion, SolutionPath, _versionsMismatch, CurrentlyUpdatedValues);
+                                FileManagement.UpdateSingleVersion(item, newVersion, CurrentlyUpdatedValues);
                             });
                         }
 
@@ -456,24 +384,52 @@ namespace AssemblyUpdater
 
         private async void ExecuteUpdateFrameworkVersion()
         {
-            string frameworkVersionToWrite = "v" + ToWriteFrameworkVersion[0] + "." + ToWriteFrameworkVersion[1]
-                + ToWriteFrameworkVersion[2] != null ? "." + ToWriteFrameworkVersion[2] : "";
-            foreach (var item in ProjectsToUpdateList)
+            if (string.IsNullOrEmpty(ToWriteFrameworkVersion))
             {
-                await Task.Run(() =>
-                {
-                    FrameworkManager.WriteFrameworkVersion(Path.Combine(SolutionPath, item.Project), frameworkVersionToWrite);
-                    UpdateFrameworkVersionFields(true);
-                    System.Windows.Forms.MessageBox.Show(Resources.OPERATION_COMPLETED);
-                });
+                System.Windows.Forms.MessageBox.Show(Resources.FILL_VERSION_FIELD, "Error");
             }
+            else
+            {
+                foreach (var item in ProjectsToUpdateList)
+                {
+                    await Task.Run(() =>
+                    {
+                        FrameworkManager.WriteFrameworkVersion(item.ProjectFullPath, ToWriteFrameworkVersion);
+                        UpdateFrameworkVersionFields(true);
+                        System.Windows.Forms.MessageBox.Show(Resources.OPERATION_COMPLETED);
+                    });
+                }
+            }
+
+           
         }
 
-        public void UpdateSingleFileWithNotification(AssemblyFileItem item)
+        public void ExecuteUpdateSingleFrameworkWithNotification(FrameworkProjectItem item)
         {
-            string newVersion = string.Join(".", ToWriteVersion);
-            FileManagement.UpdateSingleVersion(item, newVersion, SolutionPath, _versionsMismatch, CurrentlyUpdatedValues);
-            System.Windows.Forms.MessageBox.Show(Resources.OPERATION_COMPLETED);
+            if (string.IsNullOrEmpty(ToWriteFrameworkVersion))
+            {
+                System.Windows.Forms.MessageBox.Show(Resources.FILL_VERSION_FIELD, "Error");
+            }
+            else
+            {
+                FrameworkManager.WriteFrameworkVersion(item.ProjectFullPath, ToWriteVersion);
+                System.Windows.Forms.MessageBox.Show(Resources.OPERATION_COMPLETED);
+            }
+
+        }
+
+        public void UpdateSingleFileWithNotification(FrameworkProjectItem item)
+        {
+            if (string.IsNullOrEmpty(ToWriteVersion))
+            {
+                System.Windows.Forms.MessageBox.Show(Resources.FILL_VERSION_FIELD, "Error");
+            }
+            else
+            {
+                FileManagement.UpdateSingleVersion(item, ToWriteVersion, CurrentlyUpdatedValues);
+                System.Windows.Forms.MessageBox.Show(Resources.OPERATION_COMPLETED);
+            }
+
         }
 
         private bool InitializeApp()

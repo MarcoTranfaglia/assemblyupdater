@@ -9,7 +9,6 @@
 
         <StackPanel >
             <TextBox
-                        PreviewTextInput="VersionTextChanged"
                         Style="{StaticResource VersionTextBoxStyle}"
                                                 IsEnabled="False"
                         Text="{Binding SolutionPath, Mode=OneWay}" />
